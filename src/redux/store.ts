@@ -16,9 +16,11 @@ import partyReducer from "./slices/admin/partySlice";
 import subcategoryReducer from "./slices/admin/subcategorySlice";
 import countriesReducer from "./slices/admin/countriesSlice";
 import stateReducer from "./slices/admin/stateSlice";
+import cityReducer from "./slices/admin/citySlice";
 
 export const store = configureStore({
   reducer: {
+    city: cityReducer,
     state: stateReducer,
     countries: countriesReducer,
     subcategory: subcategoryReducer,
