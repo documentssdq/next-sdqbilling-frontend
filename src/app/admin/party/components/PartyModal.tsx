@@ -15,6 +15,7 @@ import {
   Spinner,
 } from "react-bootstrap";
 import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { PartyRecord } from "@/redux/slices/admin/partySlice";
 import { fetchCountries, CountriesRecord } from "@/redux/slices/admin/countriesSlice";
@@ -330,25 +331,41 @@ const PartyModal: React.FC<PartyModalProps> = ({
     return null;
   }, [stateOptions, formData.state_id, party, formData.state]);
 
+  const selectStyles = useMemo(
+    () => ({
+      menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+    }),
+    []
+  );
+
   const selectedCityOption = useMemo(() => {
-    if (!formData.city_id) return null;
     const currentId =
       typeof formData.city_id === "object" && formData.city_id
         ? String(formData.city_id._id || formData.city_id.id || "")
-        : String(formData.city_id);
-    const matched = cityOptions.find((opt) => opt.value === currentId);
-    if (matched) return matched;
-    const fromFullList = citiesList.find((c: CityRecord) => String(c.id || c._id) === currentId);
-    if (fromFullList) {
-      return { value: currentId, label: fromFullList.name || "" };
-    }
+        : String(formData.city_id || "");
+
     if (currentId) {
+      const matched = cityOptions.find((opt) => opt.value === currentId);
+      if (matched) return matched;
+      const fromFullList = citiesList.find((c: CityRecord) => String(c.id || c._id) === currentId);
+      if (fromFullList) {
+        return { value: currentId, label: fromFullList.name || "" };
+      }
       const fallbackName =
         typeof party?.city_id === "object" && party?.city_id?.name
           ? party.city_id.name
           : formData.city || "";
       return { value: currentId, label: fallbackName || "Selected City" };
     }
+
+    if (formData.city?.trim()) {
+      const matched = cityOptions.find(
+        (opt) => opt.label.trim().toLowerCase() === formData.city?.trim().toLowerCase()
+      );
+      if (matched) return matched;
+      return { value: formData.city.trim(), label: formData.city.trim() };
+    }
+
     return null;
   }, [cityOptions, citiesList, formData.city_id, party, formData.city]);
 
@@ -372,14 +389,17 @@ const PartyModal: React.FC<PartyModalProps> = ({
 
       let nextCityId = prev.city_id;
       let nextCityName = prev.city;
-      // If current city doesn't belong to the new country, reset city
-      if (nextCityId) {
+      // If country changed or cleared, check city
+      if (!newCountryId) {
+        nextCityId = "";
+        nextCityName = "";
+      } else if (nextCityId) {
         const ct = citiesList.find((c: any) => String(c.id || c._id) === String(nextCityId));
         const ctCountryId =
           typeof ct?.country_id === "object" && ct?.country_id
             ? String(ct.country_id._id || ct.country_id.id || "")
             : String(ct?.country_id || "");
-        if (!newCountryId || ctCountryId !== newCountryId) {
+        if (ctCountryId && ctCountryId !== newCountryId) {
           nextCityId = "";
           nextCityName = "";
         }
@@ -413,13 +433,29 @@ const PartyModal: React.FC<PartyModalProps> = ({
   };
 
   const handleCityChange = (selected: DropdownOption | null) => {
-    const newCityId = selected ? selected.value : "";
-    const newCityName = selected ? selected.label : "";
-    setFormData((prev) => ({
-      ...prev,
-      city_id: newCityId,
-      city: newCityName,
-    }));
+    const newCityVal = selected ? selected.value : "";
+    const newCityLabel = selected ? selected.label : "";
+
+    // If selected an existing city from the options
+    const matchedCity = citiesList.find(
+      (c: CityRecord) => String(c.id || c._id) === String(newCityVal)
+    );
+
+    if (matchedCity) {
+      setFormData((prev) => ({
+        ...prev,
+        city_id: String(matchedCity.id || matchedCity._id || ""),
+        city: matchedCity.name || newCityLabel,
+      }));
+    } else {
+      // Free-typed city name or custom value
+      setFormData((prev) => ({
+        ...prev,
+        city_id: "",
+        city: newCityLabel || newCityVal,
+      }));
+    }
+
     if (validationErrors.city_id) {
       setValidationErrors((prev) => ({ ...prev, city_id: "" }));
     }
@@ -587,7 +623,7 @@ const PartyModal: React.FC<PartyModalProps> = ({
                 instanceId="party-modal-tax-type-select"
                 options={taxTypeOptions}
                 value={selectedTaxTypeOption}
-                isSearchable={false}
+                isSearchable
                 placeholder="Select Tax..."
                 className="react-select"
                 classNamePrefix="react-select"
@@ -596,6 +632,7 @@ const PartyModal: React.FC<PartyModalProps> = ({
                 }
                 menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
                 menuPosition="fixed"
+                styles={selectStyles}
               />
             </Col>
 
@@ -631,6 +668,7 @@ const PartyModal: React.FC<PartyModalProps> = ({
                 }
                 menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
                 menuPosition="fixed"
+                styles={selectStyles}
               />
             </Col>
 
@@ -651,6 +689,7 @@ const PartyModal: React.FC<PartyModalProps> = ({
                 onChange={handleCountryChange}
                 menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
                 menuPosition="fixed"
+                styles={selectStyles}
               />
               {validationErrors.country_id && (
                 <div className="text-danger fs-12 mt-1">
@@ -661,7 +700,7 @@ const PartyModal: React.FC<PartyModalProps> = ({
 
             <Col md={6}>
               <FormLabel className="fw-semibold">City</FormLabel>
-              <Select<DropdownOption>
+              <CreatableSelect<DropdownOption>
                 instanceId="party-city-select"
                 options={cityOptions}
                 value={selectedCityOption}
@@ -671,12 +710,12 @@ const PartyModal: React.FC<PartyModalProps> = ({
                 isDisabled={!selectedCountryId}
                 placeholder={
                   selectedCountryId
-                    ? "Search & select city..."
+                    ? "Search or enter city..."
                     : "Select country first..."
                 }
                 noOptionsMessage={() =>
                   selectedCountryId
-                    ? "No cities found for selected country"
+                    ? "No matching cities. Type to enter."
                     : "Select country first"
                 }
                 className={`react-select ${validationErrors.city_id ? "is-invalid" : ""}`}
@@ -684,6 +723,7 @@ const PartyModal: React.FC<PartyModalProps> = ({
                 onChange={handleCityChange}
                 menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
                 menuPosition="fixed"
+                styles={selectStyles}
               />
               {validationErrors.city_id && (
                 <div className="text-danger fs-12 mt-1">

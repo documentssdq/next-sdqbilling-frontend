@@ -1351,3 +1351,120 @@ html[data-skin="modern"]:not([data-sidenav-size="condensed"]) {
     flex-wrap: wrap !important;
   }
 }
+
+
+/* ========================================================
+   React-Select Styles for Bootstrap 5 & Modals
+   ======================================================== */
+.react-select__menu-portal {
+  z-index: 9999 !important;
+}
+
+.react-select__menu {
+  z-index: 9999 !important;
+}
+
+.react-select {
+  width: 100%;
+
+  .react-select__control {
+    min-height: 38px;
+    border-radius: var(--#{$prefix}border-radius, 0.375rem);
+    border: 1px solid var(--#{$prefix}border-color, #dee2e6);
+    background-color: var(--#{$prefix}input-bg, #ffffff);
+    box-shadow: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+    &:hover {
+      border-color: var(--#{$prefix}primary, #3e60d5);
+    }
+
+    &--is-focused {
+      border-color: var(--#{$prefix}primary, #3e60d5);
+      box-shadow: 0 0 0 0.15rem rgba(62, 96, 213, 0.25);
+    }
+
+    &--is-disabled {
+      background-color: var(--#{$prefix}secondary-bg, #eef2f7);
+      border-color: var(--#{$prefix}border-color, #dee2e6);
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+  }
+
+  &.is-invalid .react-select__control {
+    border-color: var(--#{$prefix}danger, #f1556c) !important;
+    &:focus,
+    &--is-focused {
+      box-shadow: 0 0 0 0.15rem rgba(241, 85, 108, 0.25) !important;
+    }
+  }
+
+  .react-select__value-container {
+    padding: 2px 10px;
+    font-size: 0.875rem;
+  }
+
+  .react-select__placeholder {
+    color: var(--#{$prefix}secondary-color, #98a6ad);
+    font-size: 0.875rem;
+  }
+
+  .react-select__single-value {
+    color: var(--#{$prefix}body-color, #313a46);
+    font-size: 0.875rem;
+  }
+
+  .react-select__input-container {
+    color: var(--#{$prefix}body-color, #313a46);
+    margin: 0;
+    padding: 0;
+    font-size: 0.875rem;
+  }
+
+  .react-select__indicator {
+    padding: 6px;
+    color: var(--#{$prefix}secondary-color, #98a6ad);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--#{$prefix}body-color, #313a46);
+    }
+  }
+
+  .react-select__indicator-separator {
+    background-color: var(--#{$prefix}border-color, #dee2e6);
+    margin: 6px 0;
+  }
+
+  .react-select__menu {
+    border-radius: var(--#{$prefix}border-radius, 0.375rem);
+    background-color: var(--#{$prefix}dropdown-bg, #ffffff);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--#{$prefix}border-color, #dee2e6);
+    overflow: hidden;
+  }
+
+  .react-select__menu-list {
+    padding: 4px;
+    max-height: 250px;
+  }
+
+  .react-select__option {
+    border-radius: 4px;
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--#{$prefix}body-color, #313a46);
+
+    &--is-focused {
+      background-color: rgba(62, 96, 213, 0.1);
+      color: var(--#{$prefix}primary, #3e60d5);
+    }
+
+    &--is-selected {
+      background-color: var(--#{$prefix}primary, #3e60d5);
+      color: #ffffff;
+    }
+  }
+}

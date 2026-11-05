@@ -18,6 +18,7 @@ import {
   Row,
 } from "react-bootstrap";
 import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   addParty,
@@ -299,20 +300,39 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
     return null;
   }, [stateOptions, formData.state_id]);
 
+  const selectStyles = useMemo(
+    () => ({
+      menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+    }),
+    []
+  );
+
   const selectedCityOption = useMemo(() => {
-    if (!formData.city_id) return null;
     const currentId =
       typeof formData.city_id === "object" && formData.city_id
         ? String(formData.city_id._id || formData.city_id.id || "")
-        : String(formData.city_id);
-    const matched = cityOptions.find((opt) => opt.value === currentId);
-    if (matched) return matched;
-    const fromFullList = citiesList.find((c: CityRecord) => String(c.id || c._id) === currentId);
-    if (fromFullList) {
-      return { value: currentId, label: fromFullList.name || "" };
+        : String(formData.city_id || "");
+
+    if (currentId) {
+      const matched = cityOptions.find((opt) => opt.value === currentId);
+      if (matched) return matched;
+      const fromFullList = citiesList.find((c: CityRecord) => String(c.id || c._id) === currentId);
+      if (fromFullList) {
+        return { value: currentId, label: fromFullList.name || "" };
+      }
+      return { value: currentId, label: formData.city || "Selected City" };
     }
+
+    if (formData.city?.trim()) {
+      const matched = cityOptions.find(
+        (opt) => opt.label.trim().toLowerCase() === formData.city?.trim().toLowerCase()
+      );
+      if (matched) return matched;
+      return { value: formData.city.trim(), label: formData.city.trim() };
+    }
+
     return null;
-  }, [cityOptions, citiesList, formData.city_id]);
+  }, [cityOptions, citiesList, formData.city_id, formData.city]);
 
   const handleCountryChange = (selected: DropdownOption | null) => {
     const newCountryId = selected ? selected.value : "";
@@ -333,13 +353,16 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
 
       let nextCityId = prev.city_id;
       let nextCityName = prev.city;
-      if (nextCityId) {
+      if (!newCountryId) {
+        nextCityId = "";
+        nextCityName = "";
+      } else if (nextCityId) {
         const ct = citiesList.find((c: any) => String(c.id || c._id) === String(nextCityId));
         const ctCountryId =
           typeof ct?.country_id === "object" && ct?.country_id
             ? String(ct.country_id._id || ct.country_id.id || "")
             : String(ct?.country_id || "");
-        if (!newCountryId || ctCountryId !== newCountryId) {
+        if (ctCountryId && ctCountryId !== newCountryId) {
           nextCityId = "";
           nextCityName = "";
         }
@@ -367,13 +390,30 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
   };
 
   const handleCityChange = (selected: DropdownOption | null) => {
-    const newCityId = selected ? selected.value : "";
-    const newCityName = selected ? selected.label : "";
-    setFormData((prev) => ({
-      ...prev,
-      city_id: newCityId,
-      city: newCityName,
-    }));
+    const newCityVal = selected ? selected.value : "";
+    const newCityLabel = selected ? selected.label : "";
+
+    const matchedCity = citiesList.find(
+      (c: CityRecord) => String(c.id || c._id) === String(newCityVal)
+    );
+
+    if (matchedCity) {
+      setFormData((prev) => ({
+        ...prev,
+        city_id: String(matchedCity.id || matchedCity._id || ""),
+        city: matchedCity.name || newCityLabel,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        city_id: "",
+        city: newCityLabel || newCityVal,
+      }));
+    }
+
+    if (validationErrors.city_id) {
+      setValidationErrors((prev) => ({ ...prev, city_id: "" }));
+    }
   };
 
   const handleChange = (field: keyof PartyRecord, value: any) => {
@@ -560,12 +600,15 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
                       instanceId="party-form-tax-type-select"
                       options={taxTypeOptions}
                       value={selectedTaxTypeOption}
-                      isSearchable={false}
+                      isSearchable
                       className="react-select"
                       classNamePrefix="react-select"
                       onChange={(selected) =>
                         handleChange("taxType", selected ? selected.value : "GST")
                       }
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                      menuPosition="fixed"
+                      styles={selectStyles}
                     />
                   </Col>
 
@@ -599,6 +642,9 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
                       onChange={(selected) =>
                         handleChange("currency", selected ? selected.value : "INR")
                       }
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                      menuPosition="fixed"
+                      styles={selectStyles}
                     />
                   </Col>
 
@@ -617,6 +663,9 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
                       className={`react-select ${validationErrors.country_id ? "is-invalid" : ""}`}
                       classNamePrefix="react-select"
                       onChange={handleCountryChange}
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                      menuPosition="fixed"
+                      styles={selectStyles}
                     />
                   </Col>
 
@@ -641,12 +690,15 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
                       className={`react-select ${validationErrors.state_id ? "is-invalid" : ""}`}
                       classNamePrefix="react-select"
                       onChange={handleStateChange}
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                      menuPosition="fixed"
+                      styles={selectStyles}
                     />
                   </Col>
 
                   <Col md={4}>
                     <FormLabel className="fw-semibold">City</FormLabel>
-                    <Select<DropdownOption>
+                    <CreatableSelect<DropdownOption>
                       instanceId="party-form-city-select"
                       options={cityOptions}
                       value={selectedCityOption}
@@ -656,17 +708,20 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
                       isDisabled={!selectedCountryId}
                       placeholder={
                         selectedCountryId
-                          ? "Search & select city..."
+                          ? "Search or enter city..."
                           : "Select country first..."
                       }
                       noOptionsMessage={() =>
                         selectedCountryId
-                          ? "No cities found for selected country"
+                          ? "No matching cities. Type to enter."
                           : "Select country first"
                       }
                       className={`react-select ${validationErrors.city_id ? "is-invalid" : ""}`}
                       classNamePrefix="react-select"
                       onChange={handleCityChange}
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                      menuPosition="fixed"
+                      styles={selectStyles}
                     />
                     {validationErrors.city_id && (
                       <div className="text-danger fs-12 mt-1">
