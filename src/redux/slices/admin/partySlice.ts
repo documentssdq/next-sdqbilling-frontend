@@ -17,6 +17,7 @@ export interface PartyRecord {
   phone?: string;
   email?: string;
   taxType?: "GST" | "VAT" | string;
+  currency_id?: string | { id?: string; _id?: string; name?: string; code?: string; symbol?: string; [key: string]: any } | null;
   currency?: string;
   gstin?: string;
   country_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any } | null;

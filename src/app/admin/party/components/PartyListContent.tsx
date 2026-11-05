@@ -315,13 +315,30 @@ const PartyListContent = () => {
         );
       },
     }),
+    columnHelper.accessor("currency", {
+      header: "Currency",
+      cell: ({ row }) => {
+        let code = "";
+        let symbol = "";
+        if (row.original.currency_id && typeof row.original.currency_id === "object") {
+          code = row.original.currency_id.code || row.original.currency_id.name || "";
+          symbol = row.original.currency_id.symbol || "";
+        } else {
+          code = row.original.currency || "INR";
+        }
+        return (
+          <span className="badge bg-secondary-subtle text-secondary fs-12 px-2 py-1 fw-semibold">
+            {code} {symbol ? `(${symbol})` : ""}
+          </span>
+        );
+      },
+    }),
     columnHelper.accessor("city", {
       header: "Location",
       cell: ({ row }) => {
         const city = getCityName(row.original);
-        const state = getStateName(row.original);
         const country = getCountryName(row.original);
-        const parts = [city, state, country].filter(Boolean);
+        const parts = [city, country].filter(Boolean);
         return <div className="text-muted fs-13">{parts.length > 0 ? parts.join(", ") : "—"}</div>;
       },
     }),
@@ -552,7 +569,7 @@ const PartyListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["Name", "Type", "Phone", "Email", "Tax Type", "TAX Number", "Currency", "City", "State", "Country", "Status", "Created At"],
+                      ["Name", "Type", "Phone", "Email", "Tax Type", "TAX Number", "Currency", "City", "Country", "Status", "Created At"],
                       ...dataToExport.map((r: PartyRecord) => [
                         r.name || "",
                         r.partyType || "customer",
@@ -560,9 +577,8 @@ const PartyListContent = () => {
                         r.email || "",
                         r.taxType || "GST",
                         r.gstin || "",
-                        r.currency || "INR",
-                        r.city || "",
-                        getStateName(r),
+                        (typeof r.currency_id === "object" && r.currency_id ? (r.currency_id.code || r.currency_id.name || "") : ""),
+                        getCityName(r),
                         getCountryName(r),
                         r.isActive ? "Active" : "Inactive",
                         r.createdAt
