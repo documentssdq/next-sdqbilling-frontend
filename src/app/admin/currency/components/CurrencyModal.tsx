@@ -184,7 +184,7 @@ const CurrencyModal: React.FC<CurrencyModalProps> = ({
               </FormControl.Feedback>
             </Col>
 
-            <Col xs={12}>
+            {/* <Col xs={12}>
               <FormLabel className="fw-semibold">Description</FormLabel>
               <FormControl
                 as="textarea"
@@ -197,7 +197,7 @@ const CurrencyModal: React.FC<CurrencyModalProps> = ({
               <FormControl.Feedback type="invalid">
                 {validationErrors.description}
               </FormControl.Feedback>
-            </Col>
+            </Col> */}
 
             <Col xs={12}>
               <FormLabel className="fw-semibold mb-2 d-block">Status</FormLabel>

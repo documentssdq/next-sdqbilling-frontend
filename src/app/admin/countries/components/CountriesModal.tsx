@@ -143,7 +143,7 @@ const CountriesModal: React.FC<CountriesModalProps> = ({
               </FormControl.Feedback>
             </Col>
 
-            <Col xs={12}>
+            {/* <Col xs={12}>
               <FormLabel className="fw-semibold">Description</FormLabel>
               <FormControl
                 as="textarea"
@@ -156,7 +156,7 @@ const CountriesModal: React.FC<CountriesModalProps> = ({
               <FormControl.Feedback type="invalid">
                 {validationErrors.description}
               </FormControl.Feedback>
-            </Col>
+            </Col> */}
 
             <Col xs={12}>
               <FormLabel className="fw-semibold mb-2 d-block">Status</FormLabel>
