@@ -22,6 +22,7 @@ import {
   ServiceRecord,
 } from "@/redux/slices/admin/serviceSlice";
 import { fetchCategorys } from "@/redux/slices/admin/categorySlice";
+import { fetchSubcategorys } from "@/redux/slices/admin/subcategorySlice";
 import DataTable from "@/components/table/DataTable";
 import TablePagination from "@/components/table/TablePagination";
 import Icon from "@/components/wrappers/Icon";
@@ -48,6 +49,9 @@ const ServiceListContent = () => {
   );
   const { records: categories } = useAppSelector(
     (state: any) => state.category || { records: [] }
+  );
+  const { records: subcategories } = useAppSelector(
+    (state: any) => state.subcategory || { records: [] }
   );
 
   const access = useAccess("Services");
@@ -93,7 +97,10 @@ const ServiceListContent = () => {
     if (categories.length === 0) {
       dispatch(fetchCategorys());
     }
-  }, [dispatch, categories.length]);
+    if (subcategories.length === 0) {
+      dispatch(fetchSubcategorys());
+    }
+  }, [dispatch, categories.length, subcategories.length]);
 
   useEffect(() => {
     if (alertMsg) {
@@ -114,6 +121,18 @@ const ServiceListContent = () => {
       if (found) return found.name || "N/A";
     }
     return "N/A";
+  };
+
+  const getSubcategoryName = (row: ServiceRecord) => {
+    if (row.subcategory_id && typeof row.subcategory_id === "object") {
+      return row.subcategory_id.name || "";
+    }
+    const subcatId = typeof row.subcategory_id === "string" ? row.subcategory_id : "";
+    if (subcatId) {
+      const found = subcategories.find((s: any) => (s.id || s._id) === subcatId);
+      if (found) return found.name || "";
+    }
+    return "";
   };
 
   const handleConfirmDeleteSingle = (record: ServiceRecord) => {
@@ -184,15 +203,17 @@ const ServiceListContent = () => {
   const filteredRecords = useMemo(() => {
     return records.filter((r: ServiceRecord) => {
       const catName = getCategoryName(r).toLowerCase();
+      const subcatName = getSubcategoryName(r).toLowerCase();
       const matchesSearch =
         (r.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        catName.includes(searchTerm.toLowerCase());
+        catName.includes(searchTerm.toLowerCase()) ||
+        subcatName.includes(searchTerm.toLowerCase());
       const isActiveStatus = r.isActive ? "Active" : "Inactive";
       const matchesStatus = statusFilter === "All" || isActiveStatus === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [records, categories, searchTerm, statusFilter]);
+  }, [records, categories, subcategories, searchTerm, statusFilter]);
 
   const columnHelper = createColumnHelper<ServiceRecord>();
 
@@ -233,6 +254,20 @@ const ServiceListContent = () => {
           <span className="badge bg-primary-subtle text-primary fs-12 px-2 py-1 fw-semibold">
             {catName}
           </span>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: "subcategory",
+      header: "Subcategory",
+      cell: ({ row }: { row: TableRow<ServiceRecord> }) => {
+        const subcatName = getSubcategoryName(row.original);
+        return subcatName ? (
+          <span className="badge bg-info-subtle text-info fs-12 px-2 py-1 fw-semibold">
+            {subcatName}
+          </span>
+        ) : (
+          <span className="text-muted fs-12">—</span>
         );
       },
     }),
@@ -320,7 +355,7 @@ const ServiceListContent = () => {
 
   const { pageIndex, pageSize } = table.getState().pagination;
   const totalItems = filteredRecords.length;
-  const start = pageIndex * pageSize + 1;
+  const start = totalItems === 0 ? 0 : pageIndex * pageSize + 1;
   const end = Math.min((pageIndex + 1) * pageSize, totalItems);
 
   return (
@@ -432,10 +467,11 @@ const ServiceListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["Name", "Category", "Description", "Status", "Created At"],
+                      ["Name", "Category", "Subcategory", "Description", "Status", "Created At"],
                       ...dataToExport.map((r: ServiceRecord) => [
                         r.name || "",
                         getCategoryName(r),
+                        getSubcategoryName(r),
                         r.description || "",
                         r.isActive ? "Active" : "Inactive",
                         r.createdAt

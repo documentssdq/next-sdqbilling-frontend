@@ -23,6 +23,7 @@ import {
 } from "@/redux/slices/admin/partySlice";
 import { fetchCountries } from "@/redux/slices/admin/countriesSlice";
 import { fetchState } from "@/redux/slices/admin/stateSlice";
+import { fetchCity } from "@/redux/slices/admin/citySlice";
 import DataTable from "@/components/table/DataTable";
 import TablePagination from "@/components/table/TablePagination";
 import Icon from "@/components/wrappers/Icon";
@@ -52,6 +53,9 @@ const PartyListContent = () => {
   );
   const { records: states } = useAppSelector(
     (s: any) => s.state || { records: [] }
+  );
+  const { records: cities } = useAppSelector(
+    (s: any) => s.city || { records: [] }
   );
 
   const access = useAccess("Partys");
@@ -97,7 +101,8 @@ const PartyListContent = () => {
     dispatch(fetchPartys());
     if (countries.length === 0) dispatch(fetchCountries());
     if (states.length === 0) dispatch(fetchState());
-  }, [dispatch, countries.length, states.length]);
+    if (cities.length === 0) dispatch(fetchCity());
+  }, [dispatch, countries.length, states.length, cities.length]);
 
   useEffect(() => {
     if (alertMsg) {
@@ -130,6 +135,18 @@ const PartyListContent = () => {
       if (found) return found.name || "";
     }
     return row.state || "";
+  };
+
+  const getCityName = (row: PartyRecord) => {
+    if (row.city_id && typeof row.city_id === "object") {
+      return row.city_id.name || "";
+    }
+    const cId = typeof row.city_id === "string" ? row.city_id : "";
+    if (cId) {
+      const found = cities.find((c: any) => (c.id || c._id) === cId);
+      if (found) return found.name || "";
+    }
+    return row.city || "";
   };
 
   const handleConfirmDeleteSingle = (record: PartyRecord) => {
@@ -202,12 +219,15 @@ const PartyListContent = () => {
       const term = searchTerm.toLowerCase();
       const countryName = getCountryName(r).toLowerCase();
       const stateName = getStateName(r).toLowerCase();
+      const cityName = getCityName(r).toLowerCase();
       const matchesSearch =
         (r.name || "").toLowerCase().includes(term) ||
         (r.phone || "").toLowerCase().includes(term) ||
         (r.email || "").toLowerCase().includes(term) ||
         (r.gstin || "").toLowerCase().includes(term) ||
-        (r.city || "").toLowerCase().includes(term) ||
+        (r.taxType || "").toLowerCase().includes(term) ||
+        (r.currency || "").toLowerCase().includes(term) ||
+        cityName.includes(term) ||
         stateName.includes(term) ||
         countryName.includes(term);
 
@@ -218,7 +238,7 @@ const PartyListContent = () => {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [records, countries, states, searchTerm, statusFilter, typeFilter]);
+  }, [records, countries, states, cities, searchTerm, statusFilter, typeFilter]);
 
   const columnHelper = createColumnHelper<PartyRecord>();
 
@@ -282,15 +302,23 @@ const PartyListContent = () => {
       ),
     }),
     columnHelper.accessor("gstin", {
-      header: "GSTIN",
-      cell: ({ row }) => (
-        <div className="text-muted fs-12 font-monospace">{row.original.gstin || "—"}</div>
-      ),
+      header: "Tax Number",
+      cell: ({ row }) => {
+        const val = row.original.gstin;
+        const taxType = row.original.taxType || "GST";
+        if (!val) return <span className="text-muted fs-12">—</span>;
+        return (
+          <div className="d-flex align-items-center gap-1">
+            <span className="badge bg-light text-secondary border fs-10">{taxType}</span>
+            <span className="text-dark fs-12 font-monospace">{val}</span>
+          </div>
+        );
+      },
     }),
     columnHelper.accessor("city", {
       header: "Location",
       cell: ({ row }) => {
-        const city = row.original.city;
+        const city = getCityName(row.original);
         const state = getStateName(row.original);
         const country = getCountryName(row.original);
         const parts = [city, state, country].filter(Boolean);
@@ -407,8 +435,7 @@ const PartyListContent = () => {
             <div className="d-flex align-items-center gap-1">
               <span className="text-muted fw-semibold fs-xs">Show</span>
               <FormSelect
-                className="form-select form-select-sm my-1 my-md-0"
-                style={{ width: "auto" }}
+                className="form-select form-select-sm my-1 my-md-0 w-auto"
                 value={table.getState().pagination.pageSize}
                 onChange={(e) => table.setPageSize(Number(e.target.value))}
               >
@@ -525,13 +552,15 @@ const PartyListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["Name", "Type", "Phone", "Email", "GSTIN", "City", "State", "Country", "Status", "Created At"],
+                      ["Name", "Type", "Phone", "Email", "Tax Type", "TAX Number", "Currency", "City", "State", "Country", "Status", "Created At"],
                       ...dataToExport.map((r: PartyRecord) => [
                         r.name || "",
                         r.partyType || "customer",
                         r.phone || "",
                         r.email || "",
+                        r.taxType || "GST",
                         r.gstin || "",
+                        r.currency || "INR",
                         r.city || "",
                         getStateName(r),
                         getCountryName(r),

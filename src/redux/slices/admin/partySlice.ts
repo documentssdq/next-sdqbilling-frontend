@@ -16,9 +16,12 @@ export interface PartyRecord {
   partyType?: "customer" | "vendor" | "both" | string;
   phone?: string;
   email?: string;
+  taxType?: "GST" | "VAT" | string;
+  currency?: string;
   gstin?: string;
   country_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any } | null;
   state_id?: string | { id?: string; _id?: string; name?: string; country_id?: any; [key: string]: any } | null;
+  city_id?: string | { id?: string; _id?: string; name?: string; country_id?: any; [key: string]: any } | null;
   city?: string;
   state?: string;
   address?: string;

@@ -204,6 +204,22 @@ const SubcategoryModal: React.FC<SubcategoryModalProps> = ({
           <Row className="g-3">
             <Col xs={12}>
               <FormLabel className="fw-semibold">
+                Subcategory Name <span className="text-danger">*</span>
+              </FormLabel>
+              <FormControl
+                type="text"
+                placeholder="Enter subcategory name..."
+                value={formData.name || ""}
+                onChange={(e) => handleChange("name", e.target.value)}
+                isInvalid={!!validationErrors.name}
+              />
+              <FormControl.Feedback type="invalid">
+                {validationErrors.name}
+              </FormControl.Feedback>
+            </Col>
+
+            <Col xs={12}>
+              <FormLabel className="fw-semibold">
                 Category <span className="text-danger">*</span>
               </FormLabel>
               <Select<CategoryOption>
@@ -245,22 +261,6 @@ const SubcategoryModal: React.FC<SubcategoryModalProps> = ({
                   {validationErrors.category_id}
                 </div>
               )}
-            </Col>
-
-            <Col xs={12}>
-              <FormLabel className="fw-semibold">
-                Subcategory Name <span className="text-danger">*</span>
-              </FormLabel>
-              <FormControl
-                type="text"
-                placeholder="Enter subcategory name..."
-                value={formData.name || ""}
-                onChange={(e) => handleChange("name", e.target.value)}
-                isInvalid={!!validationErrors.name}
-              />
-              <FormControl.Feedback type="invalid">
-                {validationErrors.name}
-              </FormControl.Feedback>
             </Col>
 
             <Col xs={12}>

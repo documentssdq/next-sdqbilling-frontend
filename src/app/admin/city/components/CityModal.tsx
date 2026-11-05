@@ -204,6 +204,22 @@ const CityModal: React.FC<CityModalProps> = ({
           <Row className="g-3">
             <Col xs={12}>
               <FormLabel className="fw-semibold">
+                City Name <span className="text-danger">*</span>
+              </FormLabel>
+              <FormControl
+                type="text"
+                placeholder="Enter city name..."
+                value={formData.name || ""}
+                onChange={(e) => handleChange("name", e.target.value)}
+                isInvalid={!!validationErrors.name}
+              />
+              <FormControl.Feedback type="invalid">
+                {validationErrors.name}
+              </FormControl.Feedback>
+            </Col>
+
+            <Col xs={12}>
+              <FormLabel className="fw-semibold">
                 Country <span className="text-danger">*</span>
               </FormLabel>
               <Select<CountryOption>
@@ -247,23 +263,7 @@ const CityModal: React.FC<CityModalProps> = ({
               )}
             </Col>
 
-            <Col xs={12}>
-              <FormLabel className="fw-semibold">
-                City Name <span className="text-danger">*</span>
-              </FormLabel>
-              <FormControl
-                type="text"
-                placeholder="Enter city name..."
-                value={formData.name || ""}
-                onChange={(e) => handleChange("name", e.target.value)}
-                isInvalid={!!validationErrors.name}
-              />
-              <FormControl.Feedback type="invalid">
-                {validationErrors.name}
-              </FormControl.Feedback>
-            </Col>
-
-            <Col xs={12}>
+            {/* <Col xs={12}>
               <FormLabel className="fw-semibold">Description</FormLabel>
               <FormControl
                 as="textarea"
@@ -276,7 +276,7 @@ const CityModal: React.FC<CityModalProps> = ({
               <FormControl.Feedback type="invalid">
                 {validationErrors.description}
               </FormControl.Feedback>
-            </Col>
+            </Col> */}
 
             <Col xs={12}>
               <FormLabel className="fw-semibold mb-2 d-block">Status</FormLabel>

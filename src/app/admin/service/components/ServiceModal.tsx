@@ -17,6 +17,7 @@ import Select from "react-select";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { ServiceRecord } from "@/redux/slices/admin/serviceSlice";
 import { fetchCategorys, CategoryRecord } from "@/redux/slices/admin/categorySlice";
+import { fetchSubcategorys, SubcategoryRecord } from "@/redux/slices/admin/subcategorySlice";
 
 interface ServiceModalProps {
   show: boolean;
@@ -25,9 +26,19 @@ interface ServiceModalProps {
   onSave: (record: ServiceRecord) => Promise<void>;
 }
 
-interface CategoryOption {
+export interface CategorySubcategoryOption {
   value: string;
   label: string;
+  category_id: string;
+  subcategory_id: string | null;
+  categoryName: string;
+  subcategoryName?: string;
+  isCategoryOnly: boolean;
+}
+
+export interface GroupedCategoryOption {
+  label: string;
+  options: CategorySubcategoryOption[];
 }
 
 const ServiceModal: React.FC<ServiceModalProps> = ({
@@ -43,9 +54,14 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
     (state: any) => state.category || { records: [], loading: false }
   );
 
+  const { records: subcategoryList, loading: subcategoriesLoading } = useAppSelector(
+    (state: any) => state.subcategory || { records: [], loading: false }
+  );
+
   const [formData, setFormData] = useState<ServiceRecord>({
     id: "",
     category_id: "",
+    subcategory_id: "",
     ccategory_id: "",
     name: "",
     description: "",
@@ -57,10 +73,15 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (show && categoryList.length === 0) {
-      dispatch(fetchCategorys());
+    if (show) {
+      if (categoryList.length === 0) {
+        dispatch(fetchCategorys());
+      }
+      if (subcategoryList.length === 0) {
+        dispatch(fetchSubcategorys());
+      }
     }
-  }, [dispatch, show, categoryList.length]);
+  }, [dispatch, show, categoryList.length, subcategoryList.length]);
 
   useEffect(() => {
     if (service) {
@@ -73,10 +94,18 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         initialCategoryId = service.ccategory_id;
       }
 
+      let initialSubcategoryId = "";
+      if (typeof service.subcategory_id === "object" && service.subcategory_id) {
+        initialSubcategoryId = service.subcategory_id.id || service.subcategory_id._id || "";
+      } else if (typeof service.subcategory_id === "string") {
+        initialSubcategoryId = service.subcategory_id;
+      }
+
       setFormData({
         id: service.id || service._id || "",
         _id: service._id || service.id || "",
         category_id: initialCategoryId,
+        subcategory_id: initialSubcategoryId,
         ccategory_id: initialCategoryId,
         name: service.name || "",
         description: service.description || "",
@@ -86,6 +115,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       setFormData({
         id: "",
         category_id: "",
+        subcategory_id: "",
         ccategory_id: "",
         name: "",
         description: "",
@@ -96,37 +126,123 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
     setErrorMessage("");
   }, [service, show]);
 
-  const categoryOptions: CategoryOption[] = useMemo(() => {
-    return categoryList
-      .filter(
-        (cat: CategoryRecord) =>
-          cat.isActive !== false || (cat.id || cat._id) === formData.category_id
-      )
-      .map((cat: CategoryRecord) => ({
-        value: cat.id || cat._id || "",
-        label: cat.name || "",
-      }));
-  }, [categoryList, formData.category_id]);
+  const groupedOptions: GroupedCategoryOption[] = useMemo(() => {
+    const groups: GroupedCategoryOption[] = [];
+
+    const activeCategories = categoryList.filter(
+      (cat: CategoryRecord) =>
+        cat.isActive !== false || (cat.id || cat._id) === formData.category_id
+    );
+
+    activeCategories.forEach((cat: CategoryRecord) => {
+      const catId = cat.id || cat._id || "";
+      const catName = cat.name || "";
+
+      const matchingSubs = subcategoryList.filter((sub: SubcategoryRecord) => {
+        const subCatId =
+          typeof sub.category_id === "object" && sub.category_id
+            ? sub.category_id.id || sub.category_id._id
+            : sub.category_id;
+        return (
+          subCatId === catId &&
+          (sub.isActive !== false || (sub.id || sub._id) === formData.subcategory_id)
+        );
+      });
+
+      const options: CategorySubcategoryOption[] = [];
+
+      // 1. Direct Category option
+      options.push({
+        value: `cat_${catId}`,
+        label: matchingSubs.length > 0 ? `${catName} (Main Category)` : catName,
+        category_id: catId,
+        subcategory_id: null,
+        categoryName: catName,
+        subcategoryName: "",
+        isCategoryOnly: true,
+      });
+
+      // 2. Subcategories under this category
+      matchingSubs.forEach((sub: SubcategoryRecord) => {
+        const subId = sub.id || sub._id || "";
+        const subName = sub.name || "Unnamed Subcategory";
+        options.push({
+          value: `sub_${subId}`,
+          label: subName,
+          category_id: catId,
+          subcategory_id: subId,
+          categoryName: catName,
+          subcategoryName: subName,
+          isCategoryOnly: false,
+        });
+      });
+
+      groups.push({
+        label: catName,
+        options,
+      });
+    });
+
+    return groups;
+  }, [categoryList, subcategoryList, formData.category_id, formData.subcategory_id]);
 
   const selectedCategoryOption = useMemo(() => {
-    if (!formData.category_id) return null;
-    const currentId =
-      typeof formData.category_id === "string" ? formData.category_id : "";
-    const matched = categoryOptions.find((opt) => opt.value === currentId);
-    if (matched) return matched;
+    const currentCatId =
+      typeof formData.category_id === "object" && formData.category_id
+        ? formData.category_id.id || formData.category_id._id || ""
+        : typeof formData.category_id === "string"
+        ? formData.category_id
+        : "";
 
-    if (currentId) {
-      const fallbackName =
-        typeof service?.category_id === "object" && service?.category_id?.name
-          ? service.category_id.name
-          : "";
+    const currentSubcatId =
+      typeof formData.subcategory_id === "object" && formData.subcategory_id
+        ? formData.subcategory_id.id || formData.subcategory_id._id || ""
+        : typeof formData.subcategory_id === "string"
+        ? formData.subcategory_id
+        : "";
+
+    if (!currentCatId && !currentSubcatId) return null;
+
+    for (const group of groupedOptions) {
+      for (const opt of group.options) {
+        if (currentSubcatId && opt.subcategory_id === currentSubcatId) {
+          return opt;
+        }
+        if (!currentSubcatId && opt.category_id === currentCatId && opt.isCategoryOnly) {
+          return opt;
+        }
+      }
+    }
+
+    // Fallback if records are still populating
+    const fallbackCatName =
+      typeof service?.category_id === "object" && service?.category_id?.name
+        ? service.category_id.name
+        : "";
+    const fallbackSubcatName =
+      typeof service?.subcategory_id === "object" && service?.subcategory_id?.name
+        ? service.subcategory_id.name
+        : "";
+
+    if (currentCatId || currentSubcatId) {
+      const label =
+        fallbackCatName && fallbackSubcatName
+          ? `${fallbackCatName} / ${fallbackSubcatName}`
+          : fallbackSubcatName || fallbackCatName || "Selected Category / Subcategory";
+
       return {
-        value: currentId,
-        label: fallbackName || "Selected Category",
+        value: currentSubcatId ? `sub_${currentSubcatId}` : `cat_${currentCatId}`,
+        label,
+        category_id: currentCatId,
+        subcategory_id: currentSubcatId || null,
+        categoryName: fallbackCatName || "Category",
+        subcategoryName: fallbackSubcatName || "",
+        isCategoryOnly: !currentSubcatId,
       };
     }
+
     return null;
-  }, [categoryOptions, formData.category_id, service]);
+  }, [groupedOptions, formData.category_id, formData.subcategory_id, service]);
 
   const handleChange = (field: keyof ServiceRecord, value: any) => {
     setFormData((prev: ServiceRecord) => ({ ...prev, [field]: value }));
@@ -139,11 +255,42 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
     }
   };
 
+  const handleDropdownSelect = (selected: CategorySubcategoryOption | null) => {
+    if (selected) {
+      setFormData((prev) => ({
+        ...prev,
+        category_id: selected.category_id,
+        subcategory_id: selected.subcategory_id || "",
+        ccategory_id: selected.category_id,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        category_id: "",
+        subcategory_id: "",
+        ccategory_id: "",
+      }));
+    }
+
+    if (validationErrors.category_id) {
+      setValidationErrors((prev) => ({ ...prev, category_id: "" }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
 
-    const catId = typeof formData.category_id === "string" ? formData.category_id.trim() : "";
+    const catId =
+      typeof formData.category_id === "string"
+        ? formData.category_id.trim()
+        : formData.category_id?.id || formData.category_id?._id || "";
+
+    const subcatId =
+      typeof formData.subcategory_id === "string"
+        ? formData.subcategory_id.trim()
+        : formData.subcategory_id?.id || formData.subcategory_id?._id || "";
+
     if (!catId) {
       errors.category_id = "Category is required";
     }
@@ -166,6 +313,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       await onSave({
         ...formData,
         category_id: catId,
+        subcategory_id: subcatId || null,
         ccategory_id: catId,
       });
       onHide();
@@ -214,21 +362,80 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           <Row className="g-3">
             <Col xs={12}>
               <FormLabel className="fw-semibold">
-                Category <span className="text-danger">*</span>
+                Service Name <span className="text-danger">*</span>
               </FormLabel>
-              <Select<CategoryOption>
-                instanceId="service-category-select"
-                options={categoryOptions}
+              <FormControl
+                type="text"
+                placeholder="Enter service name..."
+                value={formData.name || ""}
+                onChange={(e) => handleChange("name", e.target.value)}
+                isInvalid={!!validationErrors.name}
+              />
+              <FormControl.Feedback type="invalid">
+                {validationErrors.name}
+              </FormControl.Feedback>
+            </Col>
+
+            <Col xs={12}>
+              <FormLabel className="fw-semibold">
+                Category & Subcategory <span className="text-danger">*</span>
+              </FormLabel>
+              <Select<CategorySubcategoryOption, false, GroupedCategoryOption>
+                instanceId="service-modal-category-select"
+                options={groupedOptions}
                 value={selectedCategoryOption}
-                isLoading={categoriesLoading}
+                isLoading={categoriesLoading || subcategoriesLoading}
                 isSearchable
                 isClearable
-                placeholder="Search & select category..."
-                noOptionsMessage={() => "No categories found"}
-                onChange={(selected) => {
-                  const val = selected ? selected.value : "";
-                  handleChange("category_id", val);
-                  handleChange("ccategory_id", val);
+                placeholder="Search & select category or subcategory..."
+                noOptionsMessage={() => "No categories or subcategories found"}
+                onChange={(selected) => handleDropdownSelect(selected as CategorySubcategoryOption | null)}
+                filterOption={(candidate, input) => {
+                  if (!input) return true;
+                  const search = input.toLowerCase().trim();
+                  const data = candidate.data as CategorySubcategoryOption;
+                  return (
+                    (data.categoryName || "").toLowerCase().includes(search) ||
+                    (data.subcategoryName || "").toLowerCase().includes(search) ||
+                    (candidate.label || "").toLowerCase().includes(search)
+                  );
+                }}
+                formatOptionLabel={(option, { context }) => {
+                  if (context === "value") {
+                    return (
+                      <div className="d-flex align-items-center gap-1">
+                        <span className="fw-semibold text-dark">{option.categoryName}</span>
+                        {option.subcategoryName && (
+                          <>
+                            <span className="text-muted mx-1">/</span>
+                            <span className="text-primary fw-medium">
+                              {option.subcategoryName}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="d-flex align-items-center justify-content-between py-1">
+                      <div className="d-flex align-items-center gap-1">
+                        {option.isCategoryOnly ? (
+                          <span className="text-dark fw-medium">{option.label}</span>
+                        ) : (
+                          <span className="ps-2 text-dark">↳ {option.label}</span>
+                        )}
+                      </div>
+                      <span
+                        className={`badge ${
+                          option.isCategoryOnly
+                            ? "bg-secondary-subtle text-secondary"
+                            : "bg-info-subtle text-info"
+                        } fs-11`}
+                      >
+                        {option.isCategoryOnly ? "Category" : "Subcategory"}
+                      </span>
+                    </div>
+                  );
                 }}
                 menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
                 menuPosition="fixed"
@@ -249,6 +456,17 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                       borderColor: validationErrors.category_id ? "#f1556c" : "#3e60d5",
                     },
                   }),
+                  groupHeading: (base) => ({
+                    ...base,
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    color: "#3e60d5",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    backgroundColor: "#f8f9fa",
+                    padding: "6px 12px",
+                    margin: 0,
+                  }),
                 }}
               />
               {validationErrors.category_id && (
@@ -256,22 +474,6 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                   {validationErrors.category_id}
                 </div>
               )}
-            </Col>
-
-            <Col xs={12}>
-              <FormLabel className="fw-semibold">
-                Service Name <span className="text-danger">*</span>
-              </FormLabel>
-              <FormControl
-                type="text"
-                placeholder="e.g. Web Development"
-                value={formData.name || ""}
-                onChange={(e) => handleChange("name", e.target.value)}
-                isInvalid={!!validationErrors.name}
-              />
-              <FormControl.Feedback type="invalid">
-                {validationErrors.name}
-              </FormControl.Feedback>
             </Col>
 
             <Col xs={12}>

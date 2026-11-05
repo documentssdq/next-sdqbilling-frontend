@@ -12,7 +12,8 @@ export interface PaginationInfo {
 export interface ServiceRecord {
   id?: string;
   _id?: string;
-  category_id?: string | { id?: string; _id?: string; name?: string };
+  category_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any };
+  subcategory_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any } | null;
   ccategory_id?: string;
   name?: string;
   description?: string;
@@ -48,7 +49,7 @@ export const fetchServices = createAsyncThunk<
   { rejectValue: string }
 >("service/fetchServices", async (_, { rejectWithValue }) => {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/services`, {
+    const res = await fetch(`${API_BASE_URL}/admin/services?limit=1000`, {
       headers: { ...getAuthHeaders() },
     });
     const json = await res.json().catch(() => null);
@@ -88,8 +89,8 @@ export const addService = createAsyncThunk<
     }
     return {
       ...json.data,
-      id: json.data.id || json.data._id,
-      _id: json.data._id || json.data.id,
+      id: json.data?.id || json.data?._id,
+      _id: json.data?._id || json.data?.id,
     };
   } catch (error: any) {
     return rejectWithValue(error.message || "Error adding service");
@@ -117,8 +118,8 @@ export const updateService = createAsyncThunk<
     }
     return {
       ...json.data,
-      id: json.data.id || json.data._id,
-      _id: json.data._id || json.data.id,
+      id: json.data?.id || json.data?._id,
+      _id: json.data?._id || json.data?.id,
     };
   } catch (error: any) {
     return rejectWithValue(error.message || "Error updating service");

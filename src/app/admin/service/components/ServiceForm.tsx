@@ -25,15 +25,26 @@ import {
   ServiceRecord,
 } from "@/redux/slices/admin/serviceSlice";
 import { fetchCategorys, CategoryRecord } from "@/redux/slices/admin/categorySlice";
+import { fetchSubcategorys, SubcategoryRecord } from "@/redux/slices/admin/subcategorySlice";
 
 interface ServiceFormProps {
   mode: "add" | "edit";
   recordId?: string;
 }
 
-interface CategoryOption {
+export interface CategorySubcategoryOption {
   value: string;
   label: string;
+  category_id: string;
+  subcategory_id: string | null;
+  categoryName: string;
+  subcategoryName?: string;
+  isCategoryOnly: boolean;
+}
+
+export interface GroupedCategoryOption {
+  label: string;
+  options: CategorySubcategoryOption[];
 }
 
 const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
@@ -47,10 +58,14 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
   const { records: categoryList, loading: categoriesLoading } = useAppSelector(
     (state: any) => state.category || { records: [], loading: false }
   );
+  const { records: subcategoryList, loading: subcategoriesLoading } = useAppSelector(
+    (state: any) => state.subcategory || { records: [], loading: false }
+  );
 
   const [formData, setFormData] = useState<ServiceRecord>({
     id: recordId || "",
     category_id: "",
+    subcategory_id: "",
     ccategory_id: "",
     name: "",
     description: "",
@@ -68,7 +83,10 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
     if (categoryList.length === 0) {
       dispatch(fetchCategorys());
     }
-  }, [dispatch, records.length, categoryList.length]);
+    if (subcategoryList.length === 0) {
+      dispatch(fetchSubcategorys());
+    }
+  }, [dispatch, records.length, categoryList.length, subcategoryList.length]);
 
   useEffect(() => {
     if (isEdit && recordId && records.length > 0) {
@@ -83,43 +101,146 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
           catId = found.ccategory_id;
         }
 
+        let subcatId = "";
+        if (typeof found.subcategory_id === "object" && found.subcategory_id) {
+          subcatId = found.subcategory_id.id || found.subcategory_id._id || "";
+        } else if (typeof found.subcategory_id === "string") {
+          subcatId = found.subcategory_id;
+        }
+
         setFormData({
           ...found,
           id: found.id || found._id || recordId,
           category_id: catId,
+          subcategory_id: subcatId,
           ccategory_id: catId,
+          name: found.name || "",
+          description: found.description || "",
+          isActive: found.isActive !== undefined ? found.isActive : true,
         });
       }
     }
   }, [isEdit, recordId, records]);
 
-  const categoryOptions: CategoryOption[] = useMemo(() => {
-    return categoryList
-      .filter(
-        (cat: CategoryRecord) =>
-          cat.isActive !== false || (cat.id || cat._id) === formData.category_id
-      )
-      .map((cat: CategoryRecord) => ({
-        value: cat.id || cat._id || "",
-        label: cat.name || "",
-      }));
-  }, [categoryList, formData.category_id]);
+  const groupedOptions: GroupedCategoryOption[] = useMemo(() => {
+    const groups: GroupedCategoryOption[] = [];
+
+    const activeCategories = categoryList.filter(
+      (cat: CategoryRecord) =>
+        cat.isActive !== false || (cat.id || cat._id) === formData.category_id
+    );
+
+    activeCategories.forEach((cat: CategoryRecord) => {
+      const catId = cat.id || cat._id || "";
+      const catName = cat.name || "Unnamed Category";
+
+      const matchingSubs = subcategoryList.filter((sub: SubcategoryRecord) => {
+        const subCatId =
+          typeof sub.category_id === "object" && sub.category_id
+            ? sub.category_id.id || sub.category_id._id
+            : sub.category_id;
+        return (
+          subCatId === catId &&
+          (sub.isActive !== false || (sub.id || sub._id) === formData.subcategory_id)
+        );
+      });
+
+      const options: CategorySubcategoryOption[] = [];
+
+      // 1. Direct Category option
+      options.push({
+        value: `cat_${catId}`,
+        label: matchingSubs.length > 0 ? `${catName} (Main Category)` : catName,
+        category_id: catId,
+        subcategory_id: null,
+        categoryName: catName,
+        subcategoryName: "",
+        isCategoryOnly: true,
+      });
+
+      // 2. Subcategories under this category
+      matchingSubs.forEach((sub: SubcategoryRecord) => {
+        const subId = sub.id || sub._id || "";
+        const subName = sub.name || "Unnamed Subcategory";
+        options.push({
+          value: `sub_${subId}`,
+          label: subName,
+          category_id: catId,
+          subcategory_id: subId,
+          categoryName: catName,
+          subcategoryName: subName,
+          isCategoryOnly: false,
+        });
+      });
+
+      groups.push({
+        label: catName,
+        options,
+      });
+    });
+
+    return groups;
+  }, [categoryList, subcategoryList, formData.category_id, formData.subcategory_id]);
 
   const selectedCategoryOption = useMemo(() => {
-    if (!formData.category_id) return null;
-    const currentId =
-      typeof formData.category_id === "string" ? formData.category_id : "";
-    const matched = categoryOptions.find((opt) => opt.value === currentId);
-    if (matched) return matched;
+    const currentCatId =
+      typeof formData.category_id === "object" && formData.category_id
+        ? formData.category_id.id || formData.category_id._id || ""
+        : typeof formData.category_id === "string"
+        ? formData.category_id
+        : "";
 
-    if (currentId) {
+    const currentSubcatId =
+      typeof formData.subcategory_id === "object" && formData.subcategory_id
+        ? formData.subcategory_id.id || formData.subcategory_id._id || ""
+        : typeof formData.subcategory_id === "string"
+        ? formData.subcategory_id
+        : "";
+
+    if (!currentCatId && !currentSubcatId) return null;
+
+    for (const group of groupedOptions) {
+      for (const opt of group.options) {
+        if (currentSubcatId && opt.subcategory_id === currentSubcatId) {
+          return opt;
+        }
+        if (!currentSubcatId && opt.category_id === currentCatId && opt.isCategoryOnly) {
+          return opt;
+        }
+      }
+    }
+
+    const foundInRecords = records.find(
+      (r: ServiceRecord) => (r.id || r._id) === (formData.id || recordId)
+    );
+    const fallbackCatName =
+      typeof foundInRecords?.category_id === "object" && foundInRecords?.category_id?.name
+        ? foundInRecords.category_id.name
+        : "";
+    const fallbackSubcatName =
+      typeof foundInRecords?.subcategory_id === "object" && foundInRecords?.subcategory_id?.name
+        ? foundInRecords.subcategory_id.name
+        : "";
+
+    if (currentCatId || currentSubcatId) {
+      const label =
+        fallbackCatName && fallbackSubcatName
+          ? `${fallbackCatName} / ${fallbackSubcatName}`
+          : fallbackSubcatName || fallbackCatName || "Selected Category / Subcategory";
+
       return {
-        value: currentId,
-        label: "Selected Category",
+        value: currentSubcatId ? `sub_${currentSubcatId}` : `cat_${currentCatId}`,
+        label,
+        category_id: currentCatId,
+        subcategory_id: currentSubcatId || null,
+        categoryName: fallbackCatName || "Category",
+        subcategoryName: fallbackSubcatName || "",
+        isCategoryOnly: !currentSubcatId,
       };
     }
+
     return null;
-  }, [categoryOptions, formData.category_id]);
+  }, [groupedOptions, formData.category_id, formData.subcategory_id, records, formData.id, recordId]);
 
   const handleChange = (field: keyof ServiceRecord, value: any) => {
     setFormData((prev: ServiceRecord) => ({ ...prev, [field]: value }));
@@ -132,11 +253,42 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
     }
   };
 
+  const handleDropdownSelect = (selected: CategorySubcategoryOption | null) => {
+    if (selected) {
+      setFormData((prev) => ({
+        ...prev,
+        category_id: selected.category_id,
+        subcategory_id: selected.subcategory_id || "",
+        ccategory_id: selected.category_id,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        category_id: "",
+        subcategory_id: "",
+        ccategory_id: "",
+      }));
+    }
+
+    if (validationErrors.category_id) {
+      setValidationErrors((prev) => ({ ...prev, category_id: "" }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
 
-    const catId = typeof formData.category_id === "string" ? formData.category_id.trim() : "";
+    const catId =
+      typeof formData.category_id === "string"
+        ? formData.category_id.trim()
+        : formData.category_id?.id || formData.category_id?._id || "";
+
+    const subcatId =
+      typeof formData.subcategory_id === "string"
+        ? formData.subcategory_id.trim()
+        : formData.subcategory_id?.id || formData.subcategory_id?._id || "";
+
     if (!catId) errors.category_id = "Category is required";
     if (!formData.name?.trim()) errors.name = "Service name is required";
 
@@ -152,6 +304,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
       const payload = {
         ...formData,
         category_id: catId,
+        subcategory_id: subcatId || null,
         ccategory_id: catId,
       };
 
@@ -217,21 +370,64 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
                 <Row className="g-4">
                   <Col md={6}>
                     <FormLabel className="fw-semibold">
-                      Category <span className="text-danger">*</span>
+                      Category & Subcategory <span className="text-danger">*</span>
                     </FormLabel>
-                    <Select<CategoryOption>
+                    <Select<CategorySubcategoryOption, false, GroupedCategoryOption>
                       instanceId="service-form-category-select"
-                      options={categoryOptions}
+                      options={groupedOptions}
                       value={selectedCategoryOption}
-                      isLoading={categoriesLoading}
+                      isLoading={categoriesLoading || subcategoriesLoading}
                       isSearchable
                       isClearable
-                      placeholder="Search & select category..."
-                      noOptionsMessage={() => "No categories found"}
-                      onChange={(selected) => {
-                        const val = selected ? selected.value : "";
-                        handleChange("category_id", val);
-                        handleChange("ccategory_id", val);
+                      placeholder="Search & select category or subcategory..."
+                      noOptionsMessage={() => "No categories or subcategories found"}
+                      onChange={(selected) => handleDropdownSelect(selected as CategorySubcategoryOption | null)}
+                      filterOption={(candidate, input) => {
+                        if (!input) return true;
+                        const search = input.toLowerCase().trim();
+                        const data = candidate.data as CategorySubcategoryOption;
+                        return (
+                          (data.categoryName || "").toLowerCase().includes(search) ||
+                          (data.subcategoryName || "").toLowerCase().includes(search) ||
+                          (candidate.label || "").toLowerCase().includes(search)
+                        );
+                      }}
+                      formatOptionLabel={(option, { context }) => {
+                        if (context === "value") {
+                          return (
+                            <div className="d-flex align-items-center gap-1">
+                              <span className="fw-semibold text-dark">{option.categoryName}</span>
+                              {option.subcategoryName && (
+                                <>
+                                  <span className="text-muted mx-1">/</span>
+                                  <span className="text-primary fw-medium">
+                                    {option.subcategoryName}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="d-flex align-items-center justify-content-between py-1">
+                            <div className="d-flex align-items-center gap-1">
+                              {option.isCategoryOnly ? (
+                                <span className="text-dark fw-medium">{option.label}</span>
+                              ) : (
+                                <span className="ps-2 text-dark">↳ {option.label}</span>
+                              )}
+                            </div>
+                            <span
+                              className={`badge ${
+                                option.isCategoryOnly
+                                  ? "bg-secondary-subtle text-secondary"
+                                  : "bg-info-subtle text-info"
+                              } fs-11`}
+                            >
+                              {option.isCategoryOnly ? "Category" : "Subcategory"}
+                            </span>
+                          </div>
+                        );
                       }}
                       styles={{
                         control: (base, state) => ({
@@ -249,6 +445,17 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
                             borderColor: validationErrors.category_id ? "#f1556c" : "#3e60d5",
                           },
                         }),
+                        groupHeading: (base) => ({
+                          ...base,
+                          fontWeight: 700,
+                          fontSize: "12px",
+                          color: "#3e60d5",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                          backgroundColor: "#f8f9fa",
+                          padding: "6px 12px",
+                          margin: 0,
+                        }),
                       }}
                     />
                     {validationErrors.category_id && (
@@ -265,7 +472,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
                     <FormControl
                       type="text"
                       placeholder="e.g. Web Development"
-                      value={formData.name}
+                      value={formData.name || ""}
                       onChange={(e) => handleChange("name", e.target.value)}
                       isInvalid={!!validationErrors.name}
                     />

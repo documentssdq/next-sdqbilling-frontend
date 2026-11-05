@@ -236,14 +236,14 @@ const CityListContent = () => {
         );
       },
     }),
-    columnHelper.accessor("description", {
-      header: "Description",
-      cell: ({ row }) => (
-        <div className="text-muted fs-13 text-truncate" style={{ maxWidth: "250px" }}>
-          {row.original.description || "—"}
-        </div>
-      ),
-    }),
+    // columnHelper.accessor("description", {
+    //   header: "Description",
+    //   cell: ({ row }) => (
+    //     <div className="text-muted fs-13 text-truncate" style={{ maxWidth: "250px" }}>
+    //       {row.original.description || "—"}
+    //     </div>
+    //   ),
+    // }),
     columnHelper.accessor("isActive", {
       header: "Status",
       cell: ({ row }) => {

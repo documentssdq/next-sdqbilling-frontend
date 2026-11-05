@@ -43,7 +43,7 @@ export const fetchCategorys = createAsyncThunk<
   { rejectValue: string }
 >("category/fetchCategorys", async (_, { rejectWithValue }) => {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/categorys`, {
+    const res = await fetch(`${API_BASE_URL}/admin/categorys?limit=1000`, {
       headers: { ...getAuthHeaders() },
     });
     const json = await res.json().catch(() => null);
