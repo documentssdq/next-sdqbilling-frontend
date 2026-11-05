@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { saveUploadedFile, deleteUploadedFile } from "@/utils/uploadStorage";
 
 export async function POST(req: Request) {
   try {
@@ -17,11 +17,11 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = path.extname(file.name).toLowerCase();
-    const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+    const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico", ".gif"];
 
     if (!allowedExtensions.includes(ext)) {
       return NextResponse.json(
-        { success: false, message: "Invalid file type. Only PNG, JPG, JPEG, and WEBP are allowed." },
+        { success: false, message: "Invalid file type. Only PNG, JPG, JPEG, WEBP, SVG, and GIF are allowed." },
         { status: 400 }
       );
     }
@@ -36,20 +36,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const baseUploadDir = path.join(process.cwd(), "public", "uploads");
-    const uploadDir = folder ? path.join(baseUploadDir, folder) : baseUploadDir;
-    
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    const cleanFolder =
+      folder && typeof folder === "string"
+        ? folder.replace(/^[/\\]+/, "").replace(/[/\\]+$/, "")
+        : "";
 
-    const filePath = path.join(uploadDir, uniqueFilename);
-    fs.writeFileSync(filePath, buffer);
+    const relativePath = cleanFolder ? `${cleanFolder}/${uniqueFilename}` : uniqueFilename;
 
-    const url = folder ? `/uploads/${folder}/${uniqueFilename}` : `/uploads/${uniqueFilename}`;
+    // Save across both persistent and standalone directories
+    saveUploadedFile(relativePath, buffer);
+
+    const url = `/uploads/${relativePath}`;
 
     return NextResponse.json(
-      { success: true, data: { url }, message: "File uploaded successfully" },
+      { success: true, url, data: { url }, message: "File uploaded successfully" },
       { status: 200 }
     );
   } catch (error: any) {
@@ -70,27 +70,25 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, message: "No file URL provided" }, { status: 400 });
     }
 
-    // Extract the filename from the URL, expecting a format like `/uploads/filename.ext` or full URL
-    const urlObj = new URL(fileUrl, "http://localhost"); 
+    const urlObj = new URL(fileUrl, "http://localhost");
     const pathname = urlObj.pathname;
-    
+
     if (!pathname.startsWith("/uploads/")) {
-        return NextResponse.json({ success: false, message: "Invalid file path" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Invalid file path" }, { status: 400 });
     }
 
-    const filename = pathname.replace("/uploads/", "");
-    // Prevent directory traversal but allow subfolders
-    if (filename.includes("..") || filename.startsWith("/") || filename.startsWith("\\")) {
-       return NextResponse.json({ success: false, message: "Invalid filename" }, { status: 400 });
+    const filename = pathname.replace(/^\/uploads\//, "");
+    if (filename.includes("..")) {
+      return NextResponse.json({ success: false, message: "Invalid filename" }, { status: 400 });
     }
 
-    const filePath = path.join(process.cwd(), "public", "uploads", filename);
-    
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    const deleted = deleteUploadedFile(filename);
+
+    if (deleted) {
       return NextResponse.json({ success: true, message: "File deleted successfully" });
     } else {
-      return NextResponse.json({ success: false, message: "File not found" }, { status: 404 });
+      // Return success so UI state can still be cleared
+      return NextResponse.json({ success: true, message: "File not found locally, cleared from form" });
     }
   } catch (error: any) {
     console.error("Delete error:", error);

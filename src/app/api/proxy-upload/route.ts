@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { saveUploadedFile } from '@/utils/uploadStorage';
 
 export async function POST(req: Request) {
   try {
@@ -14,38 +13,37 @@ export async function POST(req: Request) {
     if (commaIndex === -1 || !base64.startsWith('data:')) {
       return NextResponse.json({ success: false, message: 'Invalid base64 image data' }, { status: 400 });
     }
-    
+
     const base64Data = base64.substring(commaIndex + 1);
     const buffer = Buffer.from(base64Data, 'base64');
-    
-    // Ensure filename is unique
+
+    // Ensure filename is safe and unique
     const safeFilename = (filename || 'file.png').replace(/[^a-zA-Z0-9.-]/g, '_');
     const uniqueFilename = `${Date.now()}-${safeFilename}`;
-    
-    // Locate the Next.js public/uploads directory
-    // In Hostinger's standalone mode, process.cwd() is often .next/standalone
-    const cwd = process.cwd();
-    const isStandalone = cwd.includes('.next') && cwd.includes('standalone');
-    const rootDir = isStandalone ? path.join(cwd, '../../') : cwd;
-    const uploadDir = path.join(rootDir, 'public', 'uploads');
-    
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    const filePath = path.join(uploadDir, uniqueFilename);
-    
-    // Save file locally to Next.js
-    fs.writeFileSync(filePath, buffer);
+
+    const cleanFolder =
+      folder && typeof folder === 'string' && !folder.includes('..')
+        ? folder.replace(/^[/\\]+/, '').replace(/[/\\]+$/, '')
+        : '';
+
+    const relativePath = cleanFolder ? `${cleanFolder}/${uniqueFilename}` : uniqueFilename;
+
+    // Persist file across both permanent and standalone directories
+    saveUploadedFile(relativePath, buffer);
+
+    const url = `/uploads/${relativePath}`;
 
     return NextResponse.json({
       success: true,
       message: 'File uploaded successfully',
-      url: `/uploads/${uniqueFilename}`
+      url,
+      data: { url },
     });
-
   } catch (error: any) {
-    console.error("Upload error:", error);
-    return NextResponse.json({ success: false, message: error.message || 'Failed to upload image' }, { status: 500 });
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || 'Failed to upload image' },
+      { status: 500 }
+    );
   }
 }

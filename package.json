@@ -5,7 +5,7 @@
   "author": "DTech",
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "build": "next build --webpack && node scripts/copy-standalone.js",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write './src/**/*.{ts,tsx,js,jsx}'",
