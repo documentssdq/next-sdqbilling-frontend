@@ -212,36 +212,6 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
     };
   }, [formData.currency, currencyOptions]);
 
-  // Country Options
-  const countryOptions: DropdownOption[] = useMemo(() => {
-    return countriesList
-      .filter((c: CountriesRecord) => c.isActive !== false || (c.id || c._id) === formData.country_id)
-      .map((c: CountriesRecord) => ({
-        value: c.id || c._id || "",
-        label: c.name || "",
-      }));
-  }, [countriesList, formData.country_id]);
-
-  // Dependent State Options
-  const stateOptions: DropdownOption[] = useMemo(() => {
-    if (!formData.country_id) return [];
-    return stateList
-      .filter((s: StateRecord) => {
-        const sCountryId =
-          typeof s.country_id === "object" && s.country_id
-            ? (s.country_id.id || s.country_id._id)
-            : s.country_id;
-        return (
-          sCountryId === formData.country_id &&
-          (s.isActive !== false || (s.id || s._id) === formData.state_id)
-        );
-      })
-      .map((s: StateRecord) => ({
-        value: s.id || s._id || "",
-        label: s.name || "",
-      }));
-  }, [stateList, formData.country_id, formData.state_id]);
-
   const selectedCountryId = useMemo(() => {
     if (!formData.country_id) return "";
     if (typeof formData.country_id === "object") {
