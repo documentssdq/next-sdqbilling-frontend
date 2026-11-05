@@ -22,8 +22,8 @@ import {
   PartyRecord,
 } from "@/redux/slices/admin/partySlice";
 import { fetchCountries } from "@/redux/slices/admin/countriesSlice";
-import { fetchState } from "@/redux/slices/admin/stateSlice";
 import { fetchCity } from "@/redux/slices/admin/citySlice";
+import { fetchCurrency } from "@/redux/slices/admin/currencySlice";
 import DataTable from "@/components/table/DataTable";
 import TablePagination from "@/components/table/TablePagination";
 import Icon from "@/components/wrappers/Icon";
@@ -51,11 +51,11 @@ const PartyListContent = () => {
   const { records: countries } = useAppSelector(
     (s: any) => s.countries || { records: [] }
   );
-  const { records: states } = useAppSelector(
-    (s: any) => s.state || { records: [] }
-  );
   const { records: cities } = useAppSelector(
     (s: any) => s.city || { records: [] }
+  );
+  const { records: currencies } = useAppSelector(
+    (s: any) => s.currency || { records: [] }
   );
 
   const access = useAccess("Partys");
@@ -100,9 +100,9 @@ const PartyListContent = () => {
   useEffect(() => {
     dispatch(fetchPartys());
     if (countries.length === 0) dispatch(fetchCountries());
-    if (states.length === 0) dispatch(fetchState());
     if (cities.length === 0) dispatch(fetchCity());
-  }, [dispatch, countries.length, states.length, cities.length]);
+    if (currencies.length === 0) dispatch(fetchCurrency());
+  }, [dispatch, countries.length, cities.length, currencies.length]);
 
   useEffect(() => {
     if (alertMsg) {
@@ -125,18 +125,6 @@ const PartyListContent = () => {
     return "";
   };
 
-  const getStateName = (row: PartyRecord) => {
-    if (row.state_id && typeof row.state_id === "object") {
-      return row.state_id.name || "";
-    }
-    const sId = typeof row.state_id === "string" ? row.state_id : "";
-    if (sId) {
-      const found = states.find((s: any) => (s.id || s._id) === sId);
-      if (found) return found.name || "";
-    }
-    return row.state || "";
-  };
-
   const getCityName = (row: PartyRecord) => {
     if (row.city_id && typeof row.city_id === "object") {
       return row.city_id.name || "";
@@ -146,7 +134,25 @@ const PartyListContent = () => {
       const found = cities.find((c: any) => (c.id || c._id) === cId);
       if (found) return found.name || "";
     }
-    return row.city || "";
+    return "";
+  };
+
+  const getCurrencyDisplay = (row: PartyRecord) => {
+    if (row.currency_id && typeof row.currency_id === "object") {
+      const code = row.currency_id.code || row.currency_id.name || "";
+      const symbol = row.currency_id.symbol ? ` (${row.currency_id.symbol})` : "";
+      return `${code}${symbol}`.trim();
+    }
+    const currId = typeof row.currency_id === "string" ? row.currency_id : "";
+    if (currId) {
+      const found = currencies.find((c: any) => (c.id || c._id) === currId);
+      if (found) {
+        const code = found.code || found.name || "";
+        const symbol = found.symbol ? ` (${found.symbol})` : "";
+        return `${code}${symbol}`.trim();
+      }
+    }
+    return "";
   };
 
   const handleConfirmDeleteSingle = (record: PartyRecord) => {
@@ -218,17 +224,16 @@ const PartyListContent = () => {
     return records.filter((r: PartyRecord) => {
       const term = searchTerm.toLowerCase();
       const countryName = getCountryName(r).toLowerCase();
-      const stateName = getStateName(r).toLowerCase();
       const cityName = getCityName(r).toLowerCase();
+      const currencyDisplay = getCurrencyDisplay(r).toLowerCase();
       const matchesSearch =
         (r.name || "").toLowerCase().includes(term) ||
         (r.phone || "").toLowerCase().includes(term) ||
         (r.email || "").toLowerCase().includes(term) ||
         (r.gstin || "").toLowerCase().includes(term) ||
         (r.taxType || "").toLowerCase().includes(term) ||
-        (r.currency || "").toLowerCase().includes(term) ||
+        currencyDisplay.includes(term) ||
         cityName.includes(term) ||
-        stateName.includes(term) ||
         countryName.includes(term);
 
       const isActiveStatus = r.isActive ? "Active" : "Inactive";
@@ -238,7 +243,7 @@ const PartyListContent = () => {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [records, countries, states, cities, searchTerm, statusFilter, typeFilter]);
+  }, [records, countries, cities, currencies, searchTerm, statusFilter, typeFilter]);
 
   const columnHelper = createColumnHelper<PartyRecord>();
 
@@ -315,25 +320,19 @@ const PartyListContent = () => {
         );
       },
     }),
-    columnHelper.accessor("currency", {
+    columnHelper.accessor("currency_id" as any, {
       header: "Currency",
       cell: ({ row }) => {
-        let code = "";
-        let symbol = "";
-        if (row.original.currency_id && typeof row.original.currency_id === "object") {
-          code = row.original.currency_id.code || row.original.currency_id.name || "";
-          symbol = row.original.currency_id.symbol || "";
-        } else {
-          code = row.original.currency || "INR";
-        }
+        const display = getCurrencyDisplay(row.original);
+        if (!display) return <span className="text-muted fs-12">—</span>;
         return (
           <span className="badge bg-secondary-subtle text-secondary fs-12 px-2 py-1 fw-semibold">
-            {code} {symbol ? `(${symbol})` : ""}
+            {display}
           </span>
         );
       },
     }),
-    columnHelper.accessor("city", {
+    columnHelper.accessor("city_id" as any, {
       header: "Location",
       cell: ({ row }) => {
         const city = getCityName(row.original);
@@ -577,7 +576,7 @@ const PartyListContent = () => {
                         r.email || "",
                         r.taxType || "GST",
                         r.gstin || "",
-                        (typeof r.currency_id === "object" && r.currency_id ? (r.currency_id.code || r.currency_id.name || "") : ""),
+                        getCurrencyDisplay(r),
                         getCityName(r),
                         getCountryName(r),
                         r.isActive ? "Active" : "Inactive",

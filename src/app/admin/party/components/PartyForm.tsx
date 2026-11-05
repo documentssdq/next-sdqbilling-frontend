@@ -350,10 +350,10 @@ const PartyForm: React.FC<PartyFormProps> = ({ mode, recordId }) => {
 
     try {
       const payloadData = {
-        name: formData.name.trim(),
-        partyType: formData.partyType,
-        phone: formData.phone.trim(),
-        email: formData.email.trim(),
+        name: formData.name?.trim() || "",
+        partyType: formData.partyType || "customer",
+        phone: formData.phone?.trim() || "",
+        email: formData.email?.trim() || "",
         taxType: formData.taxType || "GST",
         currency_id: selectedCurrencyId || null,
         gstin: formData.gstin ? formData.gstin.trim() : "",
