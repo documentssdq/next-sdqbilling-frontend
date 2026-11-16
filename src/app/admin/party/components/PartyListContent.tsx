@@ -22,6 +22,7 @@ import {
   PartyRecord,
 } from "@/redux/slices/admin/partySlice";
 import { fetchCountries } from "@/redux/slices/admin/countriesSlice";
+import { fetchState, StateRecord } from "@/redux/slices/admin/stateSlice";
 import { fetchCity } from "@/redux/slices/admin/citySlice";
 import { fetchCurrency } from "@/redux/slices/admin/currencySlice";
 import DataTable from "@/components/table/DataTable";
@@ -50,6 +51,9 @@ const PartyListContent = () => {
   );
   const { records: countries } = useAppSelector(
     (s: any) => s.countries || { records: [] }
+  );
+  const { records: states } = useAppSelector(
+    (s: any) => s.state || { records: [] }
   );
   const { records: cities } = useAppSelector(
     (s: any) => s.city || { records: [] }
@@ -100,9 +104,10 @@ const PartyListContent = () => {
   useEffect(() => {
     dispatch(fetchPartys());
     if (countries.length === 0) dispatch(fetchCountries());
+    if (states.length === 0) dispatch(fetchState());
     if (cities.length === 0) dispatch(fetchCity());
     if (currencies.length === 0) dispatch(fetchCurrency());
-  }, [dispatch, countries.length, cities.length, currencies.length]);
+  }, [dispatch, countries.length, states.length, cities.length, currencies.length]);
 
   useEffect(() => {
     if (alertMsg) {
@@ -112,6 +117,18 @@ const PartyListContent = () => {
       return () => clearTimeout(timer);
     }
   }, [alertMsg]);
+
+  const getStateName = (row: PartyRecord) => {
+    if (row.state_id && typeof row.state_id === "object") {
+      return row.state_id.name || "";
+    }
+    const sId = typeof row.state_id === "string" ? row.state_id : "";
+    if (sId) {
+      const found = states.find((s: StateRecord) => String(s.id || s._id) === sId);
+      if (found) return found.name || "";
+    }
+    return "";
+  };
 
   const getCountryName = (row: PartyRecord) => {
     if (row.country_id && typeof row.country_id === "object") {
@@ -224,6 +241,7 @@ const PartyListContent = () => {
     return records.filter((r: PartyRecord) => {
       const term = searchTerm.toLowerCase();
       const countryName = getCountryName(r).toLowerCase();
+      const stateName = getStateName(r).toLowerCase();
       const cityName = getCityName(r).toLowerCase();
       const currencyDisplay = getCurrencyDisplay(r).toLowerCase();
       const matchesSearch =
@@ -234,6 +252,7 @@ const PartyListContent = () => {
         (r.taxType || "").toLowerCase().includes(term) ||
         currencyDisplay.includes(term) ||
         cityName.includes(term) ||
+        stateName.includes(term) ||
         countryName.includes(term);
 
       const isActiveStatus = r.isActive ? "Active" : "Inactive";
@@ -243,7 +262,7 @@ const PartyListContent = () => {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [records, countries, cities, currencies, searchTerm, statusFilter, typeFilter]);
+  }, [records, countries, states, cities, currencies, searchTerm, statusFilter, typeFilter]);
 
   const columnHelper = createColumnHelper<PartyRecord>();
 
@@ -336,8 +355,9 @@ const PartyListContent = () => {
       header: "Location",
       cell: ({ row }) => {
         const city = getCityName(row.original);
+        const state = getStateName(row.original);
         const country = getCountryName(row.original);
-        const parts = [city, country].filter(Boolean);
+        const parts = [city, state, country].filter(Boolean);
         return <div className="text-muted fs-13">{parts.length > 0 ? parts.join(", ") : "—"}</div>;
       },
     }),
@@ -568,7 +588,7 @@ const PartyListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["Name", "Type", "Phone", "Email", "Tax Type", "TAX Number", "Currency", "City", "Country", "Status", "Created At"],
+                      ["Name", "Type", "Phone", "Email", "Tax Type", "TAX Number", "Currency", "City", "State", "Country", "Status", "Created At"],
                       ...dataToExport.map((r: PartyRecord) => [
                         r.name || "",
                         r.partyType || "customer",
@@ -578,6 +598,7 @@ const PartyListContent = () => {
                         r.gstin || "",
                         getCurrencyDisplay(r),
                         getCityName(r),
+                        getStateName(r),
                         getCountryName(r),
                         r.isActive ? "Active" : "Inactive",
                         r.createdAt

@@ -58,6 +58,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
     subcategory_id: "",
     ccategory_id: "",
     name: "",
+    hsn_code: "",
     description: "",
     isActive: true,
   });
@@ -105,6 +106,12 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
           subcategory_id: subcatId,
           ccategory_id: catId,
           name: found.name || "",
+          hsn_code:
+            found.hsn_code ||
+            (found as any).hsn ||
+            (found as any).sac ||
+            (found as any).hsnCode ||
+            "",
           description: found.description || "",
           isActive: found.isActive !== undefined ? found.isActive : true,
         });
@@ -243,6 +250,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
 
     if (!catId) errors.category_id = "Category is required";
     if (!formData.name?.trim()) errors.name = "Service name is required";
+    if (!formData.hsn_code?.trim()) errors.hsn_code = "HSN/SAC is required";
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -258,6 +266,8 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
         category_id: catId,
         subcategory_id: subcatId || null,
         ccategory_id: catId,
+        name: formData.name ? formData.name.trim() : "",
+        hsn_code: formData.hsn_code ? formData.hsn_code.trim() : "",
       };
 
       if (isEdit && (formData.id || recordId)) {
@@ -335,14 +345,17 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
                   </Col>
 
                   <Col md={6}>
-                    <FormLabel className="fw-semibold mb-2 d-block">Status</FormLabel>
-                    <FormCheck
-                      type="switch"
-                      label={formData.isActive ? "Active" : "Inactive"}
-                      checked={formData.isActive}
-                      onChange={(e) => handleChange("isActive", e.target.checked)}
-                      className="fs-15 fw-semibold mt-1"
+                    <FormLabel className="fw-semibold">
+                      HSN/SAC <span className="text-danger">*</span>
+                    </FormLabel>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter HSN/SAC..."
+                      value={formData.hsn_code || ""}
+                      onChange={(e) => handleChange("hsn_code", e.target.value)}
+                      isInvalid={!!validationErrors.hsn_code}
                     />
+                    <FormControl.Feedback type="invalid">{validationErrors.hsn_code}</FormControl.Feedback>
                   </Col>
 
                   {/* Category Field */}
@@ -438,6 +451,18 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ mode, recordId }) => {
                       placeholder="Describe this service..."
                       value={formData.description || ""}
                       onChange={(e) => handleChange("description", e.target.value)}
+                    />
+                  </Col>
+
+                  <Col md={12}>
+                    <FormLabel className="fw-semibold mb-2 d-block">Status</FormLabel>
+                    <FormCheck
+                      type="switch"
+                      id="service-form-status-switch"
+                      label={formData.isActive ? "Active" : "Inactive"}
+                      checked={formData.isActive}
+                      onChange={(e) => handleChange("isActive", e.target.checked)}
+                      className="fs-15 fw-semibold mt-1"
                     />
                   </Col>
                 </Row>

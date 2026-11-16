@@ -7,6 +7,7 @@ import {
 } from "@/context/useSettingsContext";
 import { useAuth } from "@/hooks/useAuth";
 import { store } from "@/redux/store";
+import { isPathMatching } from "@/utils/moduleName";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
@@ -129,7 +130,7 @@ const AppProvidersInner = ({ children }: { children: React.ReactNode }) => {
         (a, b) => (b.url?.length || 0) - (a.url?.length || 0),
       );
       const matchedRule = sortedRules.find(
-        (rule: any) => rule.url && pathname.startsWith(rule.url),
+        (rule: any) => rule.url && isPathMatching(rule.url, pathname),
       );
 
       const isSuperAdmin = user?.groupId === "GRP-1";

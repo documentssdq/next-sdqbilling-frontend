@@ -53,6 +53,7 @@ const StateForm: React.FC<StateFormProps> = ({ mode, recordId }) => {
     id: recordId || "",
     country_id: "",
     name: "",
+    code: "",
     description: "",
     isActive: true,
   });
@@ -85,6 +86,10 @@ const StateForm: React.FC<StateFormProps> = ({ mode, recordId }) => {
           ...found,
           id: found.id || found._id || recordId,
           country_id: initialCountryId,
+          name: found.name || "",
+          code: found.code || "",
+          description: found.description || "",
+          isActive: found.isActive !== undefined ? found.isActive : true,
         });
       }
     }
@@ -135,6 +140,10 @@ const StateForm: React.FC<StateFormProps> = ({ mode, recordId }) => {
       errors.name = "State name is required";
     }
 
+    if (!formData.code?.trim()) {
+      errors.code = "State code is required";
+    }
+
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       setErrorMessage("Please complete all mandatory fields.");
@@ -144,21 +153,24 @@ const StateForm: React.FC<StateFormProps> = ({ mode, recordId }) => {
     setErrorMessage("");
 
     try {
+      const payloadData = {
+        ...formData,
+        country_id: countryId,
+        name: formData.name ? formData.name.trim() : "",
+        code: formData.code ? formData.code.trim() : "",
+      };
+
       if (isEdit && (formData.id || recordId)) {
         await dispatch(
           updateState({
-            ...formData,
+            ...payloadData,
             id: formData.id || recordId,
-            country_id: countryId,
           })
         ).unwrap();
       } else {
-        const { id, _id, ...payload } = formData;
+        const { id, _id, ...payload } = payloadData;
         await dispatch(
-          addState({
-            ...payload,
-            country_id: countryId,
-          })
+          addState(payload)
         ).unwrap();
       }
       setSaved(true);
@@ -269,6 +281,22 @@ const StateForm: React.FC<StateFormProps> = ({ mode, recordId }) => {
                     />
                     <FormControl.Feedback type="invalid">
                       {validationErrors.name}
+                    </FormControl.Feedback>
+                  </Col>
+
+                  <Col md={6}>
+                    <FormLabel className="fw-semibold">
+                      State Code <span className="text-danger">*</span>
+                    </FormLabel>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter state code..."
+                      value={formData.code || ""}
+                      onChange={(e) => handleChange("code", e.target.value)}
+                      isInvalid={!!validationErrors.code}
+                    />
+                    <FormControl.Feedback type="invalid">
+                      {validationErrors.code}
                     </FormControl.Feedback>
                   </Col>
 

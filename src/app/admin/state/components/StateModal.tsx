@@ -47,6 +47,7 @@ const StateModal: React.FC<StateModalProps> = ({
     id: "",
     country_id: "",
     name: "",
+    code: "",
     description: "",
     isActive: true,
   });
@@ -75,6 +76,7 @@ const StateModal: React.FC<StateModalProps> = ({
         _id: state._id || state.id || "",
         country_id: initialCountryId,
         name: state.name || "",
+        code: state.code || "",
         description: state.description || "",
         isActive: state.isActive !== undefined ? state.isActive : true,
       });
@@ -83,6 +85,7 @@ const StateModal: React.FC<StateModalProps> = ({
         id: "",
         country_id: "",
         name: "",
+        code: "",
         description: "",
         isActive: true,
       });
@@ -147,6 +150,10 @@ const StateModal: React.FC<StateModalProps> = ({
       errors.name = "State name is required";
     }
 
+    if (!formData.code?.trim()) {
+      errors.code = "State code is required";
+    }
+
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       setErrorMessage("");
@@ -161,6 +168,8 @@ const StateModal: React.FC<StateModalProps> = ({
       await onSave({
         ...formData,
         country_id: countryId,
+        name: formData.name ? formData.name.trim() : "",
+        code: formData.code ? formData.code.trim() : "",
       });
       onHide();
     } catch (err: any) {
@@ -202,6 +211,38 @@ const StateModal: React.FC<StateModalProps> = ({
           )}
 
           <Row className="g-3">
+            <Col sm={8}>
+              <FormLabel className="fw-semibold">
+                State Name <span className="text-danger">*</span>
+              </FormLabel>
+              <FormControl
+                type="text"
+                placeholder="Enter state name..."
+                value={formData.name || ""}
+                onChange={(e) => handleChange("name", e.target.value)}
+                isInvalid={!!validationErrors.name}
+              />
+              <FormControl.Feedback type="invalid">
+                {validationErrors.name}
+              </FormControl.Feedback>
+            </Col>
+
+            <Col sm={4}>
+              <FormLabel className="fw-semibold">
+                State Code <span className="text-danger">*</span>
+              </FormLabel>
+              <FormControl
+                type="text"
+                placeholder="Enter state code..."
+                value={formData.code || ""}
+                onChange={(e) => handleChange("code", e.target.value)}
+                isInvalid={!!validationErrors.code}
+              />
+              <FormControl.Feedback type="invalid">
+                {validationErrors.code}
+              </FormControl.Feedback>
+            </Col>
+
             <Col xs={12}>
               <FormLabel className="fw-semibold">
                 Country <span className="text-danger">*</span>
@@ -245,22 +286,6 @@ const StateModal: React.FC<StateModalProps> = ({
                   {validationErrors.country_id}
                 </div>
               )}
-            </Col>
-
-            <Col xs={12}>
-              <FormLabel className="fw-semibold">
-                State Name <span className="text-danger">*</span>
-              </FormLabel>
-              <FormControl
-                type="text"
-                placeholder="Enter state name..."
-                value={formData.name || ""}
-                onChange={(e) => handleChange("name", e.target.value)}
-                isInvalid={!!validationErrors.name}
-              />
-              <FormControl.Feedback type="invalid">
-                {validationErrors.name}
-              </FormControl.Feedback>
             </Col>
 
             <Col xs={12}>

@@ -20,7 +20,8 @@ export interface PartyRecord {
   currency_id?: string | { id?: string; _id?: string; name?: string; code?: string; symbol?: string; [key: string]: any } | null;
   gstin?: string;
   country_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any } | null;
-  city_id?: string | { id?: string; _id?: string; name?: string; country_id?: any; [key: string]: any } | null;
+  state_id?: string | { id?: string; _id?: string; name?: string; code?: string; country_id?: any; [key: string]: any } | null;
+  city_id?: string | { id?: string; _id?: string; name?: string; country_id?: any; state_id?: any; [key: string]: any } | null;
   address?: string;
   description?: string;
   isActive?: boolean;
@@ -55,7 +56,7 @@ export const fetchPartys = createAsyncThunk<
   { rejectValue: string }
 >("party/fetchPartys", async (_, { rejectWithValue }) => {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/partys`, {
+    const res = await fetch(`${API_BASE_URL}/admin/partys?limit=1000&page=1`, {
       headers: { ...getAuthHeaders() },
     });
     const json = await res.json().catch(() => null);

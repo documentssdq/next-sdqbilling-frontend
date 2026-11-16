@@ -75,3 +75,87 @@ export const abbreviatedNumber = (val: number) => {
   }
   return sVal + s[sNum];
 };
+
+/**
+ * Formats a service reference as "Service Name - Category Name - Subcategory Name".
+ * Safely omits missing category or subcategory parts without leaving stray hyphens.
+ */
+export const formatServiceDisplayLabel = (
+  serviceOrId: any,
+  serviceList: any[] = [],
+  categoryList: any[] = [],
+  subcategoryList: any[] = [],
+  fallbackLabel = "",
+): string => {
+  if (!serviceOrId && serviceOrId !== 0) return fallbackLabel;
+
+  const isObj = typeof serviceOrId === "object" && serviceOrId !== null;
+  const serviceId = isObj
+    ? String(serviceOrId.id || serviceOrId._id || "")
+    : String(serviceOrId || "");
+
+  const matchedFromList = serviceId
+    ? serviceList.find(
+        (s: any) => String(s?.id || s?._id || "") === serviceId,
+      )
+    : undefined;
+
+  const serviceObj = isObj
+    ? { ...(matchedFromList || {}), ...serviceOrId }
+    : matchedFromList;
+
+  if (!serviceObj) return fallbackLabel;
+
+  const serviceName = String(serviceObj.name || "").trim();
+
+  const resolveRelatedName = (
+    primaryRef: any,
+    secondaryRef: any,
+    directName: any,
+    list: any[],
+  ): string => {
+    if (typeof directName === "string" && directName.trim()) {
+      return directName.trim();
+    }
+    const chosenRef =
+      primaryRef && typeof primaryRef === "object" && primaryRef.name
+        ? primaryRef
+        : secondaryRef && typeof secondaryRef === "object" && secondaryRef.name
+          ? secondaryRef
+          : primaryRef ?? secondaryRef;
+
+    if (chosenRef && typeof chosenRef === "object" && chosenRef.name) {
+      return String(chosenRef.name).trim();
+    }
+    const refId =
+      chosenRef && typeof chosenRef === "object"
+        ? String(chosenRef.id || chosenRef._id || "")
+        : String(chosenRef || "");
+    if (!refId) return "";
+    const match = list.find(
+      (item: any) => String(item?.id || item?._id || "") === refId,
+    );
+    return match?.name ? String(match.name).trim() : "";
+  };
+
+  const categoryName = resolveRelatedName(
+    serviceObj.category_id,
+    matchedFromList?.category_id,
+    serviceObj.category_name ||
+      serviceObj.categoryName ||
+      matchedFromList?.category_name,
+    categoryList,
+  );
+
+  const subcategoryName = resolveRelatedName(
+    serviceObj.subcategory_id,
+    matchedFromList?.subcategory_id,
+    serviceObj.subcategory_name ||
+      serviceObj.subcategoryName ||
+      matchedFromList?.subcategory_name,
+    subcategoryList,
+  );
+
+  const parts = [serviceName, categoryName, subcategoryName].filter(Boolean);
+  return parts.length > 0 ? parts.join(" - ") : fallbackLabel;
+};

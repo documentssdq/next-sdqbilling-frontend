@@ -13,6 +13,7 @@ export interface CityRecord {
   id?: string;
   _id?: string;
   country_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any };
+  state_id?: string | { id?: string; _id?: string; name?: string; code?: string; [key: string]: any };
   name?: string;
   description?: string;
   isActive?: boolean;

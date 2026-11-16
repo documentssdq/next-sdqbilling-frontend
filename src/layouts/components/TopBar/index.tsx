@@ -13,6 +13,7 @@ import NotificationDropdownPeople from "./components/NotificationDropdownPeople"
 import SearchBoxRoundedRight from "./components/SearchBoxRoundedRight";
 import SimpleUserDropdown from "./components/SimpleUserDropdown";
 import ThemeDropdown from "./components/ThemeDropdown";
+import FinancialYearSelect from "./components/FinancialYearSelect";
 import { useLayoutContext } from "@/context/useLayoutContext";
 
 import logoBlack from "@/assets/images/logo-black.png";
@@ -76,6 +77,8 @@ const TopBar = () => {
         </div>
         <div className="d-flex align-items-center gap-2">
           {/* <SearchBoxRoundedRight /> */}
+
+          <FinancialYearSelect />
 
           <ThemeDropdown />
 

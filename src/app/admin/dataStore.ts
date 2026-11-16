@@ -1,4 +1,4 @@
-﻿export interface UserRecord {
+export interface UserRecord {
   id: string;
   _id?: string;
   name: string;
@@ -296,6 +296,30 @@ export const initialWebsiteSettings: WebsiteSettingItem[] = [
     type: "text",
     group: "Email / SMTP",
     value: process.env.EMAIL_HOST || "smtp.gmail.com",
+  },
+  {
+    id: "SET-9",
+    displayName: "Purchase Prefix",
+    key: "prefixes.purchase",
+    type: "text",
+    group: "Prefixes",
+    value: "BILL/P",
+  },
+  {
+    id: "SET-10",
+    displayName: "Purchase Proforma Prefix",
+    key: "prefixes.purchase_order",
+    type: "text",
+    group: "Prefixes",
+    value: "PO",
+  },
+  {
+    id: "SET-11",
+    displayName: "Sale Order Prefix",
+    key: "prefixes.saleorder",
+    type: "text",
+    group: "Prefixes",
+    value: "SO",
   },
 ];
 

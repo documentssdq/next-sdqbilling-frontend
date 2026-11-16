@@ -186,6 +186,7 @@ const StateListContent = () => {
       const countryName = getCountryName(r).toLowerCase();
       const matchesSearch =
         (r.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         countryName.includes(searchTerm.toLowerCase());
       const isActiveStatus = r.isActive ? "Active" : "Inactive";
@@ -222,6 +223,14 @@ const StateListContent = () => {
       header: "State Name",
       cell: ({ row }) => (
         <div className="fw-semibold text-dark fs-14">{row.original.name || "N/A"}</div>
+      ),
+    }),
+    columnHelper.accessor("code", {
+      header: "State Code",
+      cell: ({ row }) => (
+        <span className="font-monospace text-dark fs-13">
+          {row.original.code || "—"}
+        </span>
       ),
     }),
     columnHelper.display({
@@ -432,9 +441,10 @@ const StateListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["State Name", "Country", "Description", "Status", "Created At"],
+                      ["State Name", "State Code", "Country", "Description", "Status", "Created At"],
                       ...dataToExport.map((r: StateRecord) => [
                         r.name || "",
+                        r.code || "",
                         getCountryName(r),
                         r.description || "",
                         r.isActive ? "Active" : "Inactive",

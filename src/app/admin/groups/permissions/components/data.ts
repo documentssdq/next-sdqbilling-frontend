@@ -12,6 +12,7 @@ export type ManagementType = {
   url?: string;
   icon?: string;
   users: number;
+  isActive?: boolean;
 };
 
 export const permissionManagementData: ManagementType[] = [

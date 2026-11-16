@@ -54,6 +54,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
     subcategory_id: "",
     ccategory_id: "",
     name: "",
+    hsn_code: "",
     description: "",
     isActive: true,
   });
@@ -98,6 +99,12 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         subcategory_id: initialSubcategoryId,
         ccategory_id: initialCategoryId,
         name: service.name || "",
+        hsn_code:
+          service.hsn_code ||
+          (service as any).hsn ||
+          (service as any).sac ||
+          (service as any).hsnCode ||
+          "",
         description: service.description || "",
         isActive: service.isActive !== undefined ? service.isActive : true,
       });
@@ -108,6 +115,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         subcategory_id: "",
         ccategory_id: "",
         name: "",
+        hsn_code: "",
         description: "",
         isActive: true,
       });
@@ -249,6 +257,10 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       errors.name = "Service name is required";
     }
 
+    if (!formData.hsn_code?.trim()) {
+      errors.hsn_code = "HSN/SAC is required";
+    }
+
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       setErrorMessage("");
@@ -265,6 +277,8 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         category_id: catId,
         subcategory_id: subcatId || null,
         ccategory_id: catId,
+        name: formData.name ? formData.name.trim() : "",
+        hsn_code: formData.hsn_code ? formData.hsn_code.trim() : "",
       });
       onHide();
     } catch (err: any) {
@@ -310,7 +324,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           )}
 
           <Row className="g-3">
-            <Col xs={12}>
+            <Col sm={9}>
               <FormLabel className="fw-semibold">
                 Service Name <span className="text-danger">*</span>
               </FormLabel>
@@ -323,6 +337,22 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
               />
               <FormControl.Feedback type="invalid">
                 {validationErrors.name}
+              </FormControl.Feedback>
+            </Col>
+
+            <Col sm={3}>
+              <FormLabel className="fw-semibold">
+                HSN/SAC <span className="text-danger">*</span>
+              </FormLabel>
+              <FormControl
+                type="text"
+                placeholder="Enter HSN/SAC..."
+                value={formData.hsn_code || ""}
+                onChange={(e) => handleChange("hsn_code", e.target.value)}
+                isInvalid={!!validationErrors.hsn_code}
+              />
+              <FormControl.Feedback type="invalid">
+                {validationErrors.hsn_code}
               </FormControl.Feedback>
             </Col>
 

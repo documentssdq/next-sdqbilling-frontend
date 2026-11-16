@@ -149,6 +149,37 @@ export const deletePermission = createAsyncThunk<
   }
 });
 
+export const statusPermission = createAsyncThunk<
+  ManagementType,
+  { id: string; isActive: boolean },
+  { rejectValue: string }
+>("permissions/statusPermission", async ({ id, isActive }, { rejectWithValue }) => {
+  try {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("token") || sessionStorage.getItem("token")
+        : null;
+    const res = await fetch(
+      `${API_BASE_URL}/admin/permissions/status/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: isActive, isActive }),
+      },
+    );
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return rejectWithValue(json?.message || "Failed to update permission status");
+    }
+    return json.data;
+  } catch (error: any) {
+    return rejectWithValue(error.message || "Error updating permission status");
+  }
+});
+
 const permissionSlice = createSlice({
   name: "permissions",
   initialState,
@@ -201,6 +232,24 @@ const permissionSlice = createSlice({
       })
       .addCase(deletePermission.rejected, (state, action) => {
         state.error = action.payload || "Failed to delete permission";
+      })
+      // Status Toggle
+      .addCase(statusPermission.fulfilled, (state, action) => {
+        const index = state.permissions.findIndex(
+          (p) =>
+            (p.id && p.id === action.payload.id) ||
+            p.name === action.payload.name,
+        );
+        if (index !== -1) {
+          state.permissions[index] = {
+            ...state.permissions[index],
+            ...action.payload,
+            isActive: action.payload.isActive !== false,
+          };
+        }
+      })
+      .addCase(statusPermission.rejected, (state, action) => {
+        state.error = action.payload || "Failed to update permission status";
       });
   },
 });

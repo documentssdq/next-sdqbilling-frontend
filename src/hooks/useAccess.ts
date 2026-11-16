@@ -1,4 +1,5 @@
 import { useAppSelector } from "@/redux/hooks";
+import { isSameModuleName, normalizeExactModuleKey } from "@/utils/moduleName";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Swal from "sweetalert2";
@@ -14,19 +15,19 @@ export const useAccess = (moduleName: string): AccessControl => {
   const { user } = useAppSelector((state) => state.auth);
 
   const accessRules = user?.accessRules || [];
-  const rule = accessRules.find((r: any) => {
-    const mod = r.moduleName?.trim()?.toLowerCase();
-    const target = moduleName?.trim()?.toLowerCase();
-    if (mod === target) return true;
-    return false;
-  });
+  const targetExact = normalizeExactModuleKey(moduleName);
+  const rule =
+    accessRules.find(
+      (r: any) => normalizeExactModuleKey(r.moduleName) === targetExact,
+    ) ||
+    accessRules.find((r: any) => isSameModuleName(r.moduleName, moduleName));
 
   if (rule) {
     return {
-      read: rule.read,
-      write: rule.write,
-      delete: rule.delete,
-      export: rule.export,
+      read: Boolean(rule.read),
+      write: Boolean(rule.write),
+      delete: Boolean(rule.delete),
+      export: Boolean(rule.export),
     };
   }
 

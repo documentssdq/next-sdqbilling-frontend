@@ -18,9 +18,21 @@ import countriesReducer from "./slices/admin/countriesSlice";
 import stateReducer from "./slices/admin/stateSlice";
 import cityReducer from "./slices/admin/citySlice";
 import currencyReducer from "./slices/admin/currencySlice";
+import unitReducer from "./slices/admin/unitSlice";
+import purchaseReducer from "./slices/admin/purchaseSlice";
+import taxrateReducer from "./slices/admin/taxrateSlice";
+import financialYearReducer from "./slices/admin/financialYearSlice";
+import purchaseorderReducer from "./slices/admin/purchaseorderSlice";
+import saleorderReducer from "./slices/admin/saleorderSlice";
 
 export const store = configureStore({
   reducer: {
+    saleorder: saleorderReducer,
+    purchaseorder: purchaseorderReducer,
+    financialYear: financialYearReducer,
+    taxrate: taxrateReducer,
+    purchase: purchaseReducer,
+    unit: unitReducer,
     currency: currencyReducer,
     city: cityReducer,
     state: stateReducer,

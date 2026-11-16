@@ -22,6 +22,24 @@ export const menuItems: MenuItemType[] = [
     isTitle: true,
     children: [
       {
+        url: "/admin/purchase",
+        icon: "shopping-bag",
+        slug: "pages:apps-purchase",
+        label: "Purchase",
+      },
+      {
+        url: "/admin/purchaseorder",
+        icon: "shopping-cart",
+        slug: "pages:apps-purchaseorder",
+        label: "Purchase Proforma",
+      },
+      {
+        url: "/admin/saleorder",
+        icon: "shopping-bag",
+        slug: "pages:apps-saleorder",
+        label: "Sale Order",
+      },
+      {
         icon: "users",
         slug: "enterprise-user-access",
         label: "User & Access Control",

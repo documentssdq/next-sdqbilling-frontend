@@ -15,18 +15,19 @@ import {
 } from "@tanstack/react-table";
 import clsx from "clsx";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Alert,
   Button,
   Card,
   CardFooter,
   CardHeader,
+  Dropdown,
+  FormCheck,
   FormControl,
   FormSelect,
   OverlayTrigger,
   Tooltip,
-  Spinner,
 } from "react-bootstrap";
 import Swal from "sweetalert2";
 import { ManagementType } from "./data";
@@ -37,9 +38,11 @@ import {
   addPermission,
   updatePermission,
   deletePermission,
+  statusPermission,
   clearPermissionError,
 } from "@/redux/slices/admin/permissionSlice";
-import { useEffect } from "react";
+import { fetchGroups } from "@/redux/slices/admin/groupSlice";
+import { checkAuth } from "@/redux/slices/authSlice";
 import { usePageAccess, useAccess } from "@/hooks/useAccess";
 
 const PermissionTable = () => {
@@ -48,14 +51,15 @@ const PermissionTable = () => {
   const dispatch = useAppDispatch();
   const {
     permissions: data,
-    loading,
     error,
   } = useAppSelector((state) => state.permissions);
   const { groups } = useAppSelector((state) => state.groups);
 
   const [globalFilter, setGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 8 });
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 15 });
   const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>(
     {},
   );
@@ -67,7 +71,10 @@ const PermissionTable = () => {
 
   useEffect(() => {
     dispatch(fetchPermissions());
-  }, [dispatch]);
+    if (groups.length === 0) {
+      dispatch(fetchGroups());
+    }
+  }, [dispatch, groups.length]);
 
   useEffect(() => {
     if (error) {
@@ -104,12 +111,38 @@ const PermissionTable = () => {
         await dispatch(addPermission(record)).unwrap();
         setAlertMsg(`Permission "${record.name}" added successfully.`);
       }
+      await dispatch(checkAuth());
     } catch (err: any) {
       console.error("Error saving permission:", err);
       Swal.fire("Error", err || "Failed to save permission", "error");
       throw err;
     }
   };
+
+  const handleToggleStatus = async (perm: ManagementType) => {
+    const permId = perm.id || (perm as any)._id;
+    if (!permId) return;
+    const nextIsActive = !(perm.isActive !== false);
+    setTogglingId(permId);
+    try {
+      await dispatch(statusPermission({ id: permId, isActive: nextIsActive })).unwrap();
+      setAlertMsg(
+        `Permission "${perm.name}" marked as ${nextIsActive ? "Active" : "Inactive"}.`,
+      );
+      await dispatch(checkAuth());
+    } catch (err: any) {
+      Swal.fire("Error", err || "Failed to update status", "error");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const filteredData = useMemo(() => {
+    return (data || []).filter((item) => {
+      const itemStatus = item.isActive !== false ? "Active" : "Inactive";
+      return statusFilter === "All" || itemStatus === statusFilter;
+    });
+  }, [data, statusFilter]);
 
   const columnHelper = createColumnHelper<ManagementType>();
 
@@ -167,6 +200,50 @@ const PermissionTable = () => {
         </span>
       ),
     }),
+    columnHelper.accessor((row) => (row.isActive !== false ? "Active" : "Inactive"), {
+      id: "isActive",
+      header: "Status",
+      cell: ({ row }) => {
+        const isActive = row.original.isActive !== false;
+        const rowId = row.original.id || (row.original as any)._id;
+        const permId = rowId || row.original.name;
+        const variant = isActive ? "success" : "danger";
+        const label = isActive ? "Active" : "Inactive";
+        const icon = isActive ? "check-circle" : "alert-triangle";
+        return (
+          <div className="d-inline-flex align-items-center gap-2">
+            <span
+              className={`badge bg-${variant}-subtle text-${variant} badge-label d-inline-flex align-items-center gap-1`}
+            >
+              <Icon icon={icon} className="fs-xs" />
+              <span>{label}</span>
+            </span>
+            {access.write && rowId && (
+              <OverlayTrigger
+                placement="top"
+                overlay={
+                  <Tooltip id={`tooltip-status-${permId}`}>
+                    {isActive ? "Set Inactive (Hide from Left Menu)" : "Set Active (Show in Left Menu)"}
+                  </Tooltip>
+                }
+              >
+                <span className="d-inline-flex align-items-center">
+                  <FormCheck
+                    type="switch"
+                    id={`perm-status-switch-${permId}`}
+                    checked={isActive}
+                    disabled={togglingId === rowId}
+                    onChange={() => handleToggleStatus(row.original)}
+                    aria-label={`Toggle status for ${row.original.name}`}
+                    className="mb-0"
+                  />
+                </span>
+              </OverlayTrigger>
+            )}
+          </div>
+        );
+      },
+    }),
     {
       header: "Actions",
       cell: ({ row }: { row: TableRow<ManagementType> }) => (
@@ -211,13 +288,14 @@ const PermissionTable = () => {
   ];
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     state: { sorting, globalFilter, pagination, rowSelection: selectedRowIds },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     onRowSelectionChange: setSelectedRowIds,
+    getRowId: (row) => row.id || row.name,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -251,6 +329,7 @@ const PermissionTable = () => {
         );
         if (deletePermission.fulfilled.match(actionResult)) {
           setAlertMsg(`Permission "${perm.name}" has been deleted.`);
+          dispatch(checkAuth());
           Swal.fire({
             title: "Deleted!",
             text: `Permission "${perm.name}" has been deleted.`,
@@ -264,7 +343,13 @@ const PermissionTable = () => {
   };
 
   const handleConfirmDeleteBulk = () => {
-    const count = Object.keys(selectedRowIds).length;
+    const selectedIds = new Set(Object.keys(selectedRowIds));
+    const itemsToDelete = data.filter((item) =>
+      selectedIds.has(item.id || item.name),
+    );
+    const count = itemsToDelete.length;
+    if (count === 0) return;
+
     Swal.fire({
       title: "Delete Selected Permissions?",
       text: `Are you sure you want to delete ${count} selected permission(s)? This action cannot be undone.`,
@@ -277,11 +362,6 @@ const PermissionTable = () => {
       reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
-        const selectedIds = new Set(Object.keys(selectedRowIds));
-        const itemsToDelete = data.filter((_, idx) =>
-          selectedIds.has(idx.toString()),
-        );
-
         for (const item of itemsToDelete) {
           await dispatch(deletePermission(item.id || item.name));
         }
@@ -289,6 +369,7 @@ const PermissionTable = () => {
         setSelectedRowIds({});
         setPagination({ ...pagination, pageIndex: 0 });
         setAlertMsg(`${count} permission(s) have been deleted.`);
+        dispatch(checkAuth());
         Swal.fire({
           title: "Deleted!",
           text: `${count} permission(s) have been deleted.`,
@@ -319,7 +400,7 @@ const PermissionTable = () => {
           <h5 className="mb-1 fw-bold">Manage Permissions</h5>
         </div>
         <CardHeader className="border-light justify-content-between align-items-center flex-wrap gap-2">
-          <div className="d-flex gap-2 align-items-center">
+          <div className="d-flex gap-2 align-items-center flex-wrap">
             <div className="d-flex align-items-center gap-1">
               <span className="text-muted fs-12">Show</span>
               <FormSelect
@@ -328,13 +409,57 @@ const PermissionTable = () => {
                 className="form-select-sm"
                 style={{ width: "75px" }}
               >
-                {[5, 8, 10, 15, 20].map((size) => (
+                {[10, 15 , 20, 50].map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>
                 ))}
               </FormSelect>
             </div>
+
+            <span className="ms-2 me-1 fw-semibold text-muted fs-xs d-flex align-items-center gap-1">
+              <Icon icon="filter" className="fs-xs text-primary" /> Filter By:
+            </span>
+            <Dropdown className="d-inline-block">
+              <Dropdown.Toggle
+                variant="outline-secondary"
+                size="sm"
+                className="d-flex align-items-center gap-1 my-1 my-md-0"
+              >
+                <span className="fw-semibold">
+                  {statusFilter === "All" ? "All Statuses" : statusFilter}
+                </span>
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item
+                  active={statusFilter === "All"}
+                  onClick={() => {
+                    setStatusFilter("All");
+                    table.setPageIndex(0);
+                  }}
+                >
+                  All Statuses
+                </Dropdown.Item>
+                <Dropdown.Item
+                  active={statusFilter === "Active"}
+                  onClick={() => {
+                    setStatusFilter("Active");
+                    table.setPageIndex(0);
+                  }}
+                >
+                  Active
+                </Dropdown.Item>
+                <Dropdown.Item
+                  active={statusFilter === "Inactive"}
+                  onClick={() => {
+                    setStatusFilter("Inactive");
+                    table.setPageIndex(0);
+                  }}
+                >
+                  Inactive
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
 
             {access.delete && Object.keys(selectedRowIds).length > 0 && (
               <OverlayTrigger

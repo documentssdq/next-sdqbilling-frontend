@@ -14,6 +14,7 @@ export interface StateRecord {
   _id?: string;
   country_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any };
   name?: string;
+  code?: string;
   description?: string;
   isActive?: boolean;
   createdAt?: string;

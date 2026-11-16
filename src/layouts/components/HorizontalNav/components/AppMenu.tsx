@@ -1,5 +1,6 @@
 import Icon from "@/components/wrappers/Icon";
 import { menuItems } from "@/layouts/components/data";
+import { isPathMatching } from "@/layouts/components/Sidenav/components/AppMenu";
 import type { MenuItemType } from "@/types";
 import clsx from "clsx";
 import Link from "next/link";
@@ -34,7 +35,7 @@ const MenuItemWithChildren = ({
 
   const isChildActive = (items: MenuItemType[]): boolean =>
     items.some((child) => {
-      if (child.url && pathname.endsWith(child.url)) return true;
+      if (child.url && isPathMatching(child.url, pathname)) return true;
       if (child.children) return isChildActive(child.children);
       return false;
     });
@@ -125,7 +126,7 @@ const MenuItem = ({
 }) => {
   const menuLevel = level ?? 1;
   const pathname = usePathname();
-  const isActive = item.url && pathname.endsWith(item.url);
+  const isActive = isPathMatching(item.url, pathname);
 
   const link = (
     <Link

@@ -16,6 +16,7 @@ export interface ServiceRecord {
   subcategory_id?: string | { id?: string; _id?: string; name?: string; [key: string]: any } | null;
   ccategory_id?: string;
   name?: string;
+  hsn_code?: string;
   description?: string;
   isActive?: boolean;
   createdAt?: string;

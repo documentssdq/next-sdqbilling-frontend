@@ -206,6 +206,7 @@ const ServiceListContent = () => {
       const subcatName = getSubcategoryName(r).toLowerCase();
       const matchesSearch =
         (r.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.hsn_code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         catName.includes(searchTerm.toLowerCase()) ||
         subcatName.includes(searchTerm.toLowerCase());
@@ -243,6 +244,14 @@ const ServiceListContent = () => {
       header: "Service Name",
       cell: ({ row }) => (
         <div className="fw-semibold text-dark fs-14">{row.original.name || "N/A"}</div>
+      ),
+    }),
+    columnHelper.accessor("hsn_code", {
+      header: "HSN/SAC",
+      cell: ({ row }) => (
+        <span className="font-monospace text-dark fs-13">
+          {row.original.hsn_code || "—"}
+        </span>
       ),
     }),
     columnHelper.display({
@@ -467,9 +476,10 @@ const ServiceListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["Name", "Category", "Subcategory", "Description", "Status", "Created At"],
+                      ["Name", "HSN/SAC", "Category", "Subcategory", "Description", "Status", "Created At"],
                       ...dataToExport.map((r: ServiceRecord) => [
                         r.name || "",
+                        r.hsn_code || "",
                         getCategoryName(r),
                         getSubcategoryName(r),
                         r.description || "",

@@ -54,6 +54,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
   const [iconName, setIconName] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [usersCount, setUsersCount] = useState<number>(1);
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,6 +71,8 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
       setUrl(permission.url || "");
       setIconName(permission.icon || "");
       setSelectedRoles(permission.roles.map((r: any) => r.groupId));
+      setUsersCount(permission.users ?? 1);
+      setIsActive(permission.isActive !== false);
     } else {
       setName("");
       setCategory("Management");
@@ -80,6 +83,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
         [superAdminGrp?.id].filter(Boolean) as string[],
       );
       setUsersCount(1);
+      setIsActive(true);
     }
   }, [permission, show]);
 
@@ -147,6 +151,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
         permission?.time ||
         now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       users: usersCount,
+      isActive,
     };
 
     try {
@@ -261,6 +266,23 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
               value={usersCount}
               onChange={(e) => setUsersCount(Number(e.target.value))}
             />
+          </div>
+
+          <div className="mb-1">
+            <FormLabel className="fw-semibold">Status</FormLabel>
+            <div className="p-2 bg-light rounded border">
+              <FormCheck
+                type="switch"
+                id="permission-active-switch"
+                label={
+                  <span className={isActive ? "fw-semibold text-success" : "fw-semibold text-danger"}>
+                    {isActive ? "Active (Show in Left Menu)" : "Inactive (Hide in Left Menu)"}
+                  </span>
+                }
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+              />
+            </div>
           </div>
         </Modal.Body>
 

@@ -1,8 +1,8 @@
 export const META_DATA = {
-  name: "DTECH",
-  title: "DTECH",
+  name: "STARDOM QUEST PRIVATE LIMITED",
+  title: "STARDOM QUEST PRIVATE LIMITED",
   email: "dtech@gmail.com",
-  description: "DTECH",
+  description: "STARDOM QUEST PRIVATE LIMITED",
   author: "DTech System",
   username: "",
   keywords: "DEMO",

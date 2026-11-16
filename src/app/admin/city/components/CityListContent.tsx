@@ -22,6 +22,7 @@ import {
   CityRecord,
 } from "@/redux/slices/admin/citySlice";
 import { fetchCountries } from "@/redux/slices/admin/countriesSlice";
+import { fetchState, StateRecord } from "@/redux/slices/admin/stateSlice";
 import DataTable from "@/components/table/DataTable";
 import TablePagination from "@/components/table/TablePagination";
 import Icon from "@/components/wrappers/Icon";
@@ -48,6 +49,9 @@ const CityListContent = () => {
   );
   const { records: countries } = useAppSelector(
     (state: any) => state.countries || { records: [] }
+  );
+  const { records: states } = useAppSelector(
+    (state: any) => state.state || { records: [] }
   );
 
   const access = useAccess("City");
@@ -93,7 +97,10 @@ const CityListContent = () => {
     if (countries.length === 0) {
       dispatch(fetchCountries());
     }
-  }, [dispatch, countries.length]);
+    if (states.length === 0) {
+      dispatch(fetchState());
+    }
+  }, [dispatch, countries.length, states.length]);
 
   useEffect(() => {
     if (alertMsg) {
@@ -103,6 +110,18 @@ const CityListContent = () => {
       return () => clearTimeout(timer);
     }
   }, [alertMsg]);
+
+  const getStateName = (row: CityRecord) => {
+    if (row.state_id && typeof row.state_id === "object") {
+      return row.state_id.name || "N/A";
+    }
+    const sId = typeof row.state_id === "string" ? row.state_id : "";
+    if (sId) {
+      const found = states.find((s: StateRecord) => (s.id || s._id) === sId);
+      if (found) return found.name || "N/A";
+    }
+    return "N/A";
+  };
 
   const getCountryName = (row: CityRecord) => {
     if (row.country_id && typeof row.country_id === "object") {
@@ -184,15 +203,17 @@ const CityListContent = () => {
   const filteredRecords = useMemo(() => {
     return records.filter((r: CityRecord) => {
       const countryName = getCountryName(r).toLowerCase();
+      const stateName = getStateName(r).toLowerCase();
       const matchesSearch =
         (r.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        countryName.includes(searchTerm.toLowerCase());
+        countryName.includes(searchTerm.toLowerCase()) ||
+        stateName.includes(searchTerm.toLowerCase());
       const isActiveStatus = r.isActive ? "Active" : "Inactive";
       const matchesStatus = statusFilter === "All" || isActiveStatus === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [records, countries, searchTerm, statusFilter]);
+  }, [records, countries, states, searchTerm, statusFilter]);
 
   const columnHelper = createColumnHelper<CityRecord>();
 
@@ -223,6 +244,18 @@ const CityListContent = () => {
       cell: ({ row }) => (
         <div className="fw-semibold text-dark fs-14">{row.original.name || "N/A"}</div>
       ),
+    }),
+    columnHelper.display({
+      id: "state",
+      header: "State",
+      cell: ({ row }: { row: TableRow<CityRecord> }) => {
+        const stateName = getStateName(row.original);
+        return (
+          <span className="text-dark px-2 py-1 fw-semibold">
+            {stateName}
+          </span>
+        );
+      },
     }),
     columnHelper.display({
       id: "country",
@@ -432,9 +465,10 @@ const CityListContent = () => {
                         : filteredRecords;
 
                     const csvRows = [
-                      ["City Name", "Country", "Description", "Status", "Created At"],
+                      ["City Name", "State", "Country", "Description", "Status", "Created At"],
                       ...dataToExport.map((r: CityRecord) => [
                         r.name || "",
+                        getStateName(r),
                         getCountryName(r),
                         r.description || "",
                         r.isActive ? "Active" : "Inactive",
